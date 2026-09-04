@@ -1,0 +1,42 @@
+name: Build Windows Game
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Godot 4.6.3 and export templates
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
+          wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz
+          unzip -q Godot_v4.6.3-stable_linux.x86_64.zip
+          chmod +x Godot_v4.6.3-stable_linux.x86_64
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable"
+          mkdir -p /tmp/godot_templates
+          unzip -q Godot_v4.6.3-stable_export_templates.tpz -d /tmp/godot_templates
+          cp -r /tmp/godot_templates/templates/* "$HOME/.local/share/godot/export_templates/4.6.3.stable/"
+
+      - name: Import project
+        run: |
+          ./Godot_v4.6.3-stable_linux.x86_64 --headless --editor --path . --quit
+
+      - name: Export Windows build
+        run: |
+          mkdir -p build
+          ./Godot_v4.6.3-stable_linux.x86_64 --headless --path . --export-release "Windows Desktop" build/ROSVIK_BLACKOUT.exe
+
+      - name: Upload playable build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROSVIK_BLACKOUT_Windows
+          path: build/ROSVIK_BLACKOUT.exe
+          if-no-files-found: error
+          retention-days: 30

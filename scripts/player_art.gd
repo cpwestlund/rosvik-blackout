@@ -74,19 +74,23 @@ func _build_art_character() -> bool:
 func _merge_external_animation_library() -> bool:
 	var anim_res: Resource = load("res://assets/character/universal-animation-library.glb")
 	if anim_res == null or not anim_res is PackedScene:
+		print("ROSVIK_ANIM_DEBUG missing animation resource")
 		return false
 	var anim_scene: Node = (anim_res as PackedScene).instantiate()
 	if anim_scene == null:
 		return false
 	var source: AnimationPlayer = _find_animation_player(anim_scene)
 	if source == null:
+		print("ROSVIK_ANIM_DEBUG no source AnimationPlayer")
 		anim_scene.free()
 		return false
+	print("ROSVIK_ANIM_DEBUG source=", source.get_path(), " libraries=", source.get_animation_library_list())
 	var copied: AnimationLibrary = AnimationLibrary.new()
 	for library_name: StringName in source.get_animation_library_list():
 		var lib: AnimationLibrary = source.get_animation_library(library_name)
 		if lib == null:
 			continue
+		print("ROSVIK_ANIM_DEBUG lib=", library_name, " names=", lib.get_animation_list())
 		for animation_name: StringName in lib.get_animation_list():
 			var clean_name: String = String(animation_name)
 			if not copied.has_animation(clean_name):
@@ -97,6 +101,7 @@ func _merge_external_animation_library() -> bool:
 		animation_player.remove_animation_library("ual")
 	animation_player.add_animation_library("ual", copied)
 	anim_scene.free()
+	print("ROSVIK_ANIM_DEBUG target names=", animation_player.get_animation_list())
 	var idle_ok: bool = _find_clip(["Idle_Loop", "Idle"]) != ""
 	var jog_ok: bool = _find_clip(["Jog_Fwd_Loop", "Walk_Fwd_Loop", "Walk"]) != ""
 	var sprint_ok: bool = _find_clip(["Sprint_Loop", "Run_Fwd_Loop", "Run"]) != ""
@@ -138,8 +143,6 @@ func _update_animation(delta: float, sprinting: bool) -> void:
 	_animate_fallback(delta)
 
 func _add_winter_kit() -> void:
-	# Small accessories attached to the character root keep the northern winter silhouette
-	# without touching the imported CC0 skeleton/skin.
 	var pack_mat: StandardMaterial3D = _mat(Color("40564a"), 0.92)
 	var scarf_mat: StandardMaterial3D = _mat(Color("7e342d"), 0.9)
 	var backpack: MeshInstance3D = _mesh_box(Vector3(0.44, 0.56, 0.18), pack_mat, Vector3(0.0, 1.18, 0.24))

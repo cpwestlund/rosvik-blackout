@@ -85,6 +85,7 @@ func _add_integrity_house(pos: Vector3, color: Color, garage: bool) -> void:
 	root.position = pos
 	add_child(root)
 	var wall: StandardMaterial3D = _textured_mat(color,0.94,0.0,"horizontal",64,0.030)
+	var garage_wall: StandardMaterial3D = _textured_mat(color.darkened(0.04),0.95,0.0,"horizontal",64,0.028)
 	var trim: StandardMaterial3D = _mat(Color("d1d0c7"),0.92)
 	var dark_roof: StandardMaterial3D = _textured_mat(Color("343b3f"),0.90,0.04,"noise",64,0.025)
 
@@ -109,7 +110,7 @@ func _add_integrity_house(pos: Vector3, color: Color, garage: bool) -> void:
 		var garage_root: Node3D = Node3D.new()
 		garage_root.position = Vector3(6.25,0.0,-0.4)
 		root.add_child(garage_root)
-		_solid_box(Vector3(3.5,2.45,5.4),wall.darkened(0.04) if wall is StandardMaterial3D else wall,Vector3(0.0,1.225,0.0),garage_root)
+		_solid_box(Vector3(3.5,2.45,5.4),garage_wall,Vector3(0.0,1.225,0.0),garage_root)
 		_box(Vector3(3.15,2.05,0.12),_mat(Color("555f63"),0.90),Vector3(0.0,1.05,2.76),garage_root)
 		_box(Vector3(3.8,0.24,5.8),dark_roof,Vector3(0.0,2.56,0.0),garage_root)
 		_box(Vector3(3.55,0.08,5.55),packed_snow_mat,Vector3(0.0,2.72,0.0),garage_root)

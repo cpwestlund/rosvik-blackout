@@ -23,13 +23,7 @@ jobs:
             -H "Accept: application/vnd.github.raw+json" \
             "https://api.github.com/repos/Seyamalam/blood-league-kickoff/contents/public/assets/vendor/quaternius/night-striker.glb?ref=aa02a4e6d8337a0604d2da131bcbbeb1f01badf0" \
             -o assets/character/night-striker.glb
-          curl -L --fail --retry 3 \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github.raw+json" \
-            "https://api.github.com/repos/Seyamalam/blood-league-kickoff/contents/public/assets/vendor/quaternius/universal-animation-library.glb?ref=aa02a4e6d8337a0604d2da131bcbbeb1f01badf0" \
-            -o assets/character/universal-animation-library.glb
           test -s assets/character/night-striker.glb
-          test -s assets/character/universal-animation-library.glb
           ls -lh assets/character
 
       - name: Download Godot 4.6.3 and export templates
@@ -62,7 +56,7 @@ jobs:
             echo "Godot runtime exited with status $godot_status"
             exit "$godot_status"
           fi
-          for marker in ROSVIK_ART_READY ROSVIK_ANIMATIONS_READY ROSVIK_MOVEMENT_FIX_READY ROSVIK_ENTRANCE_FIX_READY; do
+          for marker in ROSVIK_ART_READY ROSVIK_ANIMATIONS_READY ROSVIK_CHARACTER_PROCEDURAL_READY ROSVIK_INTERIOR_CAMERA_READY ROSVIK_CLASSROOM_READY; do
             if ! grep -q "$marker" runtime.log; then
               echo "Missing runtime marker: $marker"
               cat runtime.log

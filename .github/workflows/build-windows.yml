@@ -43,6 +43,11 @@ jobs:
             echo "Godot runtime exited with status $godot_status"
             exit "$godot_status"
           fi
+          if ! grep -q "ROSVIK_PHYSICS_READY" runtime.log; then
+            echo "Physical Rosvik main scene did not reach ready state. Refusing to publish."
+            cat runtime.log
+            exit 1
+          fi
 
       - name: Export Windows build
         run: |

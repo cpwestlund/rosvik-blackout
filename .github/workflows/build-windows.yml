@@ -28,6 +28,22 @@ jobs:
         run: |
           ./Godot_v4.6.3-stable_linux.x86_64 --headless --editor --path . --quit
 
+      - name: Runtime smoke test
+        shell: bash
+        run: |
+          set +e
+          ./Godot_v4.6.3-stable_linux.x86_64 --headless --path . --quit-after 12 2>&1 | tee runtime.log
+          godot_status=${PIPESTATUS[0]}
+          set -e
+          if grep -E "SCRIPT ERROR|Parse Error|Invalid assignment|Invalid call|ERROR:" runtime.log; then
+            echo "Runtime errors detected. Refusing to publish a broken build."
+            exit 1
+          fi
+          if [ "$godot_status" -ne 0 ]; then
+            echo "Godot runtime exited with status $godot_status"
+            exit "$godot_status"
+          fi
+
       - name: Export Windows build
         run: |
           mkdir -p build

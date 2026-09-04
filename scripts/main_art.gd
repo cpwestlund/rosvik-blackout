@@ -16,6 +16,7 @@ func _ready() -> void:
 	_build_player()
 	_build_ui()
 	print("ROSVIK_ART_READY solids=", solid_count)
+	print("ROSVIK_ENTRANCE_FIX_READY")
 
 func _build_environment() -> void:
 	var env_node: WorldEnvironment = WorldEnvironment.new()
@@ -91,7 +92,9 @@ func _build_school() -> void:
 	open_door.rotation.y = -0.78
 	var second_door: MeshInstance3D = _box(Vector3(1.15,2.42,0.10), glass_mat, Vector3(-3.75,1.25,8.42), root)
 	second_door.rotation.y = 0.78
-	_solid_box(Vector3(5.8,0.16,3.0), concrete_mat, Vector3(-4.6,0.08,9.0), root)
+	# The threshold is visual only and flush with the surrounding floor. A 16 cm
+	# collision lip here previously behaved like an invisible wall for CharacterBody3D.
+	_box(Vector3(5.8,0.035,3.0), concrete_mat, Vector3(-4.6,0.018,9.0), root)
 
 	# Actual interior: foyer + corridor.
 	var interior_floor: StandardMaterial3D = _textured_mat(Color("737b7d"),0.9,0.0,"noise",96,0.025)
@@ -196,7 +199,7 @@ func _build_ui() -> void:
 	ui.add_child(panel)
 	var label: Label = Label.new()
 	label.position = Vector2(14.0,10.0)
-	label.text = "ROSVIK: BLACKOUT\nART / INTERIOR PASS 01\n\nSkolentrén är nu spelbar inomhus."
+	label.text = "ROSVIK: BLACKOUT\nART / INTERIOR PASS 01.1\n\nRättvänd locomotion + fri skolentré."
 	label.add_theme_font_size_override("font_size",14)
 	panel.add_child(label)
 	var hint: Label = Label.new()

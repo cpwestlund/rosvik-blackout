@@ -14,12 +14,23 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download CC0 character art
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p assets/character
-          wget -q -O assets/character/night-striker.glb https://raw.githubusercontent.com/Seyamalam/blood-league-kickoff/aa02a4e6d8337a0604d2da131bcbbeb1f01badf0/public/assets/vendor/quaternius/night-striker.glb
-          wget -q -O assets/character/universal-animation-library.glb https://raw.githubusercontent.com/Seyamalam/blood-league-kickoff/aa02a4e6d8337a0604d2da131bcbbeb1f01badf0/public/assets/vendor/quaternius/universal-animation-library.glb
+          curl -L --fail --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github.raw+json" \
+            "https://api.github.com/repos/Seyamalam/blood-league-kickoff/contents/public/assets/vendor/quaternius/night-striker.glb?ref=aa02a4e6d8337a0604d2da131bcbbeb1f01badf0" \
+            -o assets/character/night-striker.glb
+          curl -L --fail --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github.raw+json" \
+            "https://api.github.com/repos/Seyamalam/blood-league-kickoff/contents/public/assets/vendor/quaternius/universal-animation-library.glb?ref=aa02a4e6d8337a0604d2da131bcbbeb1f01badf0" \
+            -o assets/character/universal-animation-library.glb
           test -s assets/character/night-striker.glb
           test -s assets/character/universal-animation-library.glb
+          ls -lh assets/character
 
       - name: Download Godot 4.6.3 and export templates
         run: |

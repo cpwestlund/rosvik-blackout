@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3]
 
-[ext_resource path="res://scripts/main_art.gd" type="Script" id="1"]
+[ext_resource path="res://scripts/main_art_interior_fix.gd" type="Script" id="1"]
 
 [sub_resource type="BoxShape3D" id="FloorShape"]
 size = Vector3(260, 0.5, 210)

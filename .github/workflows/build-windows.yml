@@ -62,16 +62,13 @@ jobs:
             echo "Godot runtime exited with status $godot_status"
             exit "$godot_status"
           fi
-          if ! grep -q "ROSVIK_ART_READY" runtime.log; then
-            echo "Art/interior pass did not reach ready state."
-            cat runtime.log
-            exit 1
-          fi
-          if ! grep -q "ROSVIK_ANIMATIONS_READY" runtime.log; then
-            echo "Rigged character animations did not initialize."
-            cat runtime.log
-            exit 1
-          fi
+          for marker in ROSVIK_ART_READY ROSVIK_ANIMATIONS_READY ROSVIK_MOVEMENT_FIX_READY ROSVIK_ENTRANCE_FIX_READY; do
+            if ! grep -q "$marker" runtime.log; then
+              echo "Missing runtime marker: $marker"
+              cat runtime.log
+              exit 1
+            fi
+          done
 
       - name: Export Windows build
         run: |

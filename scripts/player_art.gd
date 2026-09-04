@@ -6,8 +6,7 @@ extends CharacterBody3D
 @export var turn_speed: float = 11.0
 
 var visual_root: Node3D
-var animation_player: AnimationPlayer
-var current_clip: String = ""
+var skeleton: Skeleton3D
 var loaded_art_character: bool = false
 var animation_set_ready: bool = false
 var _fallback_visual: Node3D
@@ -16,6 +15,12 @@ var _left_arm: Node3D
 var _right_arm: Node3D
 var _left_leg: Node3D
 var _right_leg: Node3D
+var _bone_left_arm: int = -1
+var _bone_right_arm: int = -1
+var _bone_left_leg: int = -1
+var _bone_right_leg: int = -1
+var _bone_left_knee: int = -1
+var _bone_right_knee: int = -1
 
 func _ready() -> void:
 	name = "Player"
@@ -33,9 +38,10 @@ func _ready() -> void:
 	loaded_art_character = _build_art_character()
 	if not loaded_art_character:
 		_build_fallback_visual()
-	print("ROSVIK_ART_PLAYER asset=", loaded_art_character, " animations=", animation_set_ready)
+	print("ROSVIK_ART_PLAYER asset=", loaded_art_character, " procedural_rig=", animation_set_ready)
 	if loaded_art_character and animation_set_ready:
 		print("ROSVIK_ANIMATIONS_READY")
+		print("ROSVIK_CHARACTER_PROCEDURAL_READY")
 	print("ROSVIK_MOVEMENT_FIX_READY")
 
 func _physics_process(delta: float) -> void:
@@ -65,50 +71,24 @@ func _build_art_character() -> bool:
 	if visual_root == null:
 		return false
 	visual_root.name = "RiggedCharacter"
-	# The body controller already rotates +Z-authored Quaternius characters into the
-	# movement direction. Rotating the visual by another PI made forward locomotion
-	# appear as backwards movement.
 	visual_root.rotation.y = 0.0
 	add_child(visual_root)
-	animation_player = _find_animation_player(visual_root)
-	if animation_player == null:
-		animation_player = AnimationPlayer.new()
-		animation_player.name = "AnimationPlayer"
-		visual_root.add_child(animation_player)
-	animation_set_ready = _merge_external_animation_library()
-	_add_winter_kit()
+	# The previous build copied animation tracks from another GLB directly onto this
+	# skeleton. They loaded, but were not retargeted, which folded the character into
+	# a crawling pose. Keep this mesh on its own rest rig and animate matching bones
+	# procedurally until a true retarget pipeline is added.
+	var imported_player: AnimationPlayer = _find_animation_player(visual_root)
+	if imported_player != null:
+		imported_player.stop()
+	skeleton = _find_skeleton(visual_root)
+	if skeleton != null:
+		_resolve_locomotion_bones()
+		animation_set_ready = true
+	else:
+		animation_set_ready = false
+	# No floating backpack/scarf primitives here. Equipment will return only when it
+	# is attached to an actual skeleton bone/socket.
 	return true
-
-func _merge_external_animation_library() -> bool:
-	var anim_res: Resource = load("res://assets/character/universal-animation-library.glb")
-	if anim_res == null or not anim_res is PackedScene:
-		return false
-	var anim_scene: Node = (anim_res as PackedScene).instantiate()
-	if anim_scene == null:
-		return false
-	var source: AnimationPlayer = _find_animation_player(anim_scene)
-	if source == null:
-		anim_scene.free()
-		return false
-	var copied: AnimationLibrary = AnimationLibrary.new()
-	for library_name: StringName in source.get_animation_library_list():
-		var lib: AnimationLibrary = source.get_animation_library(library_name)
-		if lib == null:
-			continue
-		for animation_name: StringName in lib.get_animation_list():
-			var clean_name: String = String(animation_name)
-			if not copied.has_animation(clean_name):
-				var anim: Animation = lib.get_animation(animation_name)
-				if anim != null:
-					copied.add_animation(clean_name, anim.duplicate(true))
-	if animation_player.has_animation_library("ual"):
-		animation_player.remove_animation_library("ual")
-	animation_player.add_animation_library("ual", copied)
-	anim_scene.free()
-	var idle_ok: bool = _find_clip(["Idle"]) != ""
-	var jog_ok: bool = _find_clip(["Jog_Fwd", "Walk"]) != ""
-	var sprint_ok: bool = _find_clip(["Sprint"]) != ""
-	return idle_ok and jog_ok and sprint_ok
 
 func _find_animation_player(node: Node) -> AnimationPlayer:
 	if node is AnimationPlayer:
@@ -119,39 +99,72 @@ func _find_animation_player(node: Node) -> AnimationPlayer:
 			return found
 	return null
 
-func _find_clip(candidates: Array[String]) -> String:
-	if animation_player == null:
-		return ""
-	var names: PackedStringArray = animation_player.get_animation_list()
+func _find_skeleton(node: Node) -> Skeleton3D:
+	if node is Skeleton3D:
+		return node as Skeleton3D
+	for child: Node in node.get_children():
+		var found: Skeleton3D = _find_skeleton(child)
+		if found != null:
+			return found
+	return null
+
+func _normal_name(value: String) -> String:
+	return value.to_lower().replace("_", "").replace("-", "").replace(".", "").replace(" ", "")
+
+func _find_bone(candidates: Array[String]) -> int:
+	if skeleton == null:
+		return -1
 	for candidate: String in candidates:
-		for full_name: String in names:
-			if full_name == candidate or full_name.ends_with("/" + candidate) or full_name.ends_with(candidate):
-				return full_name
-	return ""
+		var wanted: String = _normal_name(candidate)
+		for i: int in range(skeleton.get_bone_count()):
+			var bone_name: String = _normal_name(String(skeleton.get_bone_name(i)))
+			if bone_name == wanted or bone_name.contains(wanted):
+				return i
+	return -1
+
+func _resolve_locomotion_bones() -> void:
+	_bone_left_arm = _find_bone(["leftupperarm", "leftarm", "upperarml", "lupperarm"])
+	_bone_right_arm = _find_bone(["rightupperarm", "rightarm", "upperarmr", "rupperarm"])
+	_bone_left_leg = _find_bone(["leftupleg", "leftupperleg", "leftthigh", "thighl", "upperlegl"])
+	_bone_right_leg = _find_bone(["rightupleg", "rightupperleg", "rightthigh", "thighr", "upperlegr"])
+	_bone_left_knee = _find_bone(["leftleg", "leftlowerleg", "leftshin", "calfl", "lowerlegl"])
+	_bone_right_knee = _find_bone(["rightleg", "rightlowerleg", "rightshin", "calfr", "lowerlegr"])
+	print("ROSVIK_BONES armL=", _bone_left_arm, " armR=", _bone_right_arm, " legL=", _bone_left_leg, " legR=", _bone_right_leg)
 
 func _update_animation(delta: float, sprinting: bool) -> void:
 	var speed: float = Vector2(velocity.x, velocity.z).length()
-	if loaded_art_character and animation_set_ready and animation_player != null:
-		var wanted: String = ""
-		if speed < 0.12:
-			wanted = _find_clip(["Idle"])
-		elif sprinting and speed > 3.8:
-			wanted = _find_clip(["Sprint"])
-		else:
-			wanted = _find_clip(["Jog_Fwd", "Walk"])
-		if wanted != "" and wanted != current_clip:
-			animation_player.play(wanted, 0.18, 1.0)
-			current_clip = wanted
+	if loaded_art_character and skeleton != null:
+		_animate_rig(delta, speed, sprinting)
 		return
 	_animate_fallback(delta)
 
-func _add_winter_kit() -> void:
-	var pack_mat: StandardMaterial3D = _mat(Color("40564a"), 0.92)
-	var scarf_mat: StandardMaterial3D = _mat(Color("7e342d"), 0.9)
-	var backpack: MeshInstance3D = _mesh_box(Vector3(0.44, 0.56, 0.18), pack_mat, Vector3(0.0, 1.18, 0.24))
-	backpack.name = "WinterBackpack"
-	var scarf: MeshInstance3D = _mesh_box(Vector3(0.34, 0.11, 0.30), scarf_mat, Vector3(0.0, 1.58, 0.0))
-	scarf.name = "Scarf"
+func _animate_rig(delta: float, speed: float, sprinting: bool) -> void:
+	_phase += delta * (2.1 if speed < 0.12 else (10.2 if sprinting else 7.2))
+	skeleton.reset_bone_poses()
+	var moving: bool = speed > 0.12
+	if not moving:
+		visual_root.position.y = lerp(visual_root.position.y, sin(_phase) * 0.006, 0.08)
+		visual_root.rotation.x = lerp(visual_root.rotation.x, 0.0, 0.12)
+		visual_root.rotation.z = lerp(visual_root.rotation.z, 0.0, 0.12)
+		return
+	var amount: float = 0.42 if not sprinting else 0.62
+	var swing: float = sin(_phase) * amount
+	var knee_l: float = max(0.0, -sin(_phase)) * (0.35 if not sprinting else 0.52)
+	var knee_r: float = max(0.0, sin(_phase)) * (0.35 if not sprinting else 0.52)
+	_set_bone_x(_bone_left_arm, -swing * 0.72)
+	_set_bone_x(_bone_right_arm, swing * 0.72)
+	_set_bone_x(_bone_left_leg, swing)
+	_set_bone_x(_bone_right_leg, -swing)
+	_set_bone_x(_bone_left_knee, knee_l)
+	_set_bone_x(_bone_right_knee, knee_r)
+	visual_root.position.y = abs(sin(_phase)) * (0.018 if not sprinting else 0.028)
+	visual_root.rotation.x = lerp(visual_root.rotation.x, 0.04 if not sprinting else 0.085, 0.16)
+	visual_root.rotation.z = lerp(visual_root.rotation.z, -velocity.x * 0.008, 0.14)
+
+func _set_bone_x(index: int, angle: float) -> void:
+	if skeleton == null or index < 0:
+		return
+	skeleton.set_bone_pose_rotation(index, Quaternion(Vector3.RIGHT, angle))
 
 func _mat(color: Color, rough: float = 0.85) -> StandardMaterial3D:
 	var material: StandardMaterial3D = StandardMaterial3D.new()

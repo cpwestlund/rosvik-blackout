@@ -19,6 +19,10 @@ var _right_leg: Node3D
 
 func _ready() -> void:
 	name = "Player"
+	motion_mode = CharacterBody3D.MOTION_MODE_GROUNDED
+	floor_snap_length = 0.35
+	floor_stop_on_slope = true
+	max_slides = 6
 	var shape: CapsuleShape3D = CapsuleShape3D.new()
 	shape.radius = 0.32
 	shape.height = 1.72
@@ -32,6 +36,7 @@ func _ready() -> void:
 	print("ROSVIK_ART_PLAYER asset=", loaded_art_character, " animations=", animation_set_ready)
 	if loaded_art_character and animation_set_ready:
 		print("ROSVIK_ANIMATIONS_READY")
+	print("ROSVIK_MOVEMENT_FIX_READY")
 
 func _physics_process(delta: float) -> void:
 	var input_vec: Vector2 = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
@@ -60,7 +65,10 @@ func _build_art_character() -> bool:
 	if visual_root == null:
 		return false
 	visual_root.name = "RiggedCharacter"
-	visual_root.rotation.y = PI
+	# The body controller already rotates +Z-authored Quaternius characters into the
+	# movement direction. Rotating the visual by another PI made forward locomotion
+	# appear as backwards movement.
+	visual_root.rotation.y = 0.0
 	add_child(visual_root)
 	animation_player = _find_animation_player(visual_root)
 	if animation_player == null:

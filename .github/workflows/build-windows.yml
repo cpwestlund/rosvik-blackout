@@ -56,7 +56,7 @@ jobs:
             echo "Godot runtime exited with status $godot_status"
             exit "$godot_status"
           fi
-          for marker in ROSVIK_ART_READY ROSVIK_ANIMATIONS_READY ROSVIK_CHARACTER_PROCEDURAL_READY ROSVIK_INTERIOR_CAMERA_READY ROSVIK_CLASSROOM_READY; do
+          for marker in ROSVIK_ART_READY ROSVIK_ANIMATIONS_READY ROSVIK_CHARACTER_PROCEDURAL_READY ROSVIK_INTERIOR_CAMERA_READY ROSVIK_CLASSROOM_READY ROSVIK_POLISH_02_READY ROSVIK_INTERIOR_DETAIL_READY ROSVIK_ARENA_IDENTITY_READY; do
             if ! grep -q "$marker" runtime.log; then
               echo "Missing runtime marker: $marker"
               cat runtime.log

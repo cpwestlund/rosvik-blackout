@@ -13,6 +13,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Download CC0 character art
+        run: |
+          mkdir -p assets/character
+          wget -q -O assets/character/night-striker.glb https://raw.githubusercontent.com/Seyamalam/blood-league-kickoff/aa02a4e6d8337a0604d2da131bcbbeb1f01badf0/public/assets/vendor/quaternius/night-striker.glb
+          wget -q -O assets/character/universal-animation-library.glb https://raw.githubusercontent.com/Seyamalam/blood-league-kickoff/aa02a4e6d8337a0604d2da131bcbbeb1f01badf0/public/assets/vendor/quaternius/universal-animation-library.glb
+          test -s assets/character/night-striker.glb
+          test -s assets/character/universal-animation-library.glb
+
       - name: Download Godot 4.6.3 and export templates
         run: |
           wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
@@ -43,8 +51,13 @@ jobs:
             echo "Godot runtime exited with status $godot_status"
             exit "$godot_status"
           fi
-          if ! grep -q "ROSVIK_CIRCULATION_READY" runtime.log; then
-            echo "Circulation pass main scene did not reach ready state. Refusing to publish."
+          if ! grep -q "ROSVIK_ART_READY" runtime.log; then
+            echo "Art/interior pass did not reach ready state."
+            cat runtime.log
+            exit 1
+          fi
+          if ! grep -q "ROSVIK_ANIMATIONS_READY" runtime.log; then
+            echo "Rigged character animations did not initialize."
             cat runtime.log
             exit 1
           fi

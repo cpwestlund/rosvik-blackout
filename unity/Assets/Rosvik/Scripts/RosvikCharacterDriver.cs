@@ -16,8 +16,11 @@ namespace Rosvik.Blackout {
         [Header("Motion polish")]
         public float forwardLean = 3.2f;
         public float turnLean = 4.0f;
+        public float accelerationLean = 1.7f;
         public float idleBreath = .006f;
         public float movingBob = .008f;
+        public float brakingDip = .010f;
+        public float strideCyclesPerMeter = .36f;
         public float fallbackBob = .018f;
         public float fallbackLean = 1.2f;
 
@@ -28,6 +31,8 @@ namespace Rosvik.Blackout {
         bool initialized;
         float phase;
         float smoothedSpeed;
+        float previousSmoothedSpeed;
+        float smoothedAcceleration;
         float interactTimer;
         float interactDuration = .45f;
 
@@ -40,6 +45,7 @@ namespace Rosvik.Blackout {
         void OnEnable() {
             lastPosition = transform.position;
             lastForward = transform.forward;
+            previousSmoothedSpeed = smoothedSpeed;
             if (visualRoot) {
                 baseLocalPosition = visualRoot.localPosition;
                 baseLocalRotation = visualRoot.localRotation;
@@ -75,14 +81,20 @@ namespace Rosvik.Blackout {
             float dt = Mathf.Max(.0001f, Time.deltaTime);
             Vector3 delta = transform.position - lastPosition;
             delta.y = 0f;
-            float rawSpeed = delta.magnitude / dt;
+            float travelled = delta.magnitude;
+            float rawSpeed = travelled / dt;
             smoothedSpeed = Mathf.Lerp(smoothedSpeed, rawSpeed, 1f - Mathf.Exp(-13f * dt));
+            float rawAcceleration = (smoothedSpeed - previousSmoothedSpeed) / dt;
+            smoothedAcceleration = Mathf.Lerp(smoothedAcceleration, rawAcceleration, 1f - Mathf.Exp(-10f * dt));
+            previousSmoothedSpeed = smoothedSpeed;
             lastPosition = transform.position;
 
             float normalized = Mathf.Clamp01(smoothedSpeed / Mathf.Max(.1f, fullSpeed));
             float turnRate = Vector3.SignedAngle(lastForward, transform.forward, Vector3.up) / dt;
             lastForward = transform.forward;
             float normalizedTurn = Mathf.Clamp(turnRate / 220f, -1f, 1f);
+            float normalizedAcceleration = Mathf.Clamp(smoothedAcceleration / 9f, -1f, 1f);
+            float braking = Mathf.Clamp01(-smoothedAcceleration / 8f);
 
             bool hasController = animator && animator.runtimeAnimatorController;
             if (hasController) {
@@ -96,8 +108,11 @@ namespace Rosvik.Blackout {
             visualRoot.localPosition = baseLocalPosition;
             visualRoot.localRotation = baseLocalRotation;
 
-            if (normalized > .02f)
-                phase += dt * Mathf.Lerp(6.0f, 10.5f, normalized);
+            // Tie locomotion cadence to actual distance travelled instead of wall-clock time.
+            // The body motion therefore naturally follows acceleration/deceleration and does
+            // not keep "walking in place" while the CharacterController is still settling.
+            if (travelled > .0002f && normalized > .015f)
+                phase += travelled * Mathf.Max(.05f, strideCyclesPerMeter) * Mathf.PI * 2f;
             else
                 phase += dt * 1.35f;
 
@@ -108,16 +123,18 @@ namespace Rosvik.Blackout {
 
                 float bob = normalized > .02f ? Mathf.Abs(Mathf.Sin(phase * 2f)) * fallbackBob : 0f;
                 float lean = normalized > .02f ? Mathf.Sin(phase * .5f) * fallbackLean * normalized : 0f;
-                visualRoot.localPosition = baseLocalPosition + Vector3.up * bob;
-                visualRoot.localRotation = baseLocalRotation * Quaternion.Euler(lean, 0f, -normalizedTurn * turnLean);
+                float accelPitch = normalizedAcceleration * accelerationLean;
+                visualRoot.localPosition = baseLocalPosition + Vector3.up * (bob - braking * brakingDip);
+                visualRoot.localRotation = baseLocalRotation * Quaternion.Euler(lean + accelPitch, 0f, -normalizedTurn * turnLean);
             } else {
                 // Subtle secondary motion on top of the real animation clips. This is small
                 // enough not to fight the rig, but removes the rigid "FBX sliding on rails" read.
                 float breath = normalized < .03f ? Mathf.Sin(phase) * idleBreath : 0f;
                 float bob = normalized > .03f ? Mathf.Abs(Mathf.Sin(phase)) * movingBob * normalized : 0f;
-                float pitch = normalized * forwardLean;
+                float accelPitch = normalizedAcceleration * accelerationLean;
+                float pitch = normalized * forwardLean + accelPitch;
                 float roll = -normalizedTurn * turnLean * Mathf.Lerp(.35f, 1f, normalized);
-                visualRoot.localPosition = baseLocalPosition + Vector3.up * (breath + bob);
+                visualRoot.localPosition = baseLocalPosition + Vector3.up * (breath + bob - braking * brakingDip);
                 visualRoot.localRotation = baseLocalRotation * Quaternion.Euler(pitch, 0f, roll);
             }
 

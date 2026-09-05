@@ -28,6 +28,9 @@ move_right={"deadzone":0.25,"events":[Object(InputEventKey,"physical_keycode":68
 sprint={"deadzone":0.25,"events":[Object(InputEventKey,"physical_keycode":4194325)]}
 interact={"deadzone":0.25,"events":[Object(InputEventKey,"physical_keycode":69)]}
 flashlight={"deadzone":0.25,"events":[Object(InputEventKey,"physical_keycode":70)]}
+consume_food={"deadzone":0.25,"events":[Object(InputEventKey,"physical_keycode":49)]}
+consume_drink={"deadzone":0.25,"events":[Object(InputEventKey,"physical_keycode":50)]}
+equip_warmth={"deadzone":0.25,"events":[Object(InputEventKey,"physical_keycode":71)]}
 
 [physics]
 common/physics_ticks_per_second=60

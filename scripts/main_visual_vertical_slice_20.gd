@@ -20,6 +20,7 @@ func _ready() -> void:
 	add_child(_detail_root20)
 	_remove_roof_scallops20()
 	_fix_school_entrance20()
+	_fix_school_entry_collision20()
 	_add_schoolyard_life20()
 	_add_road_detail20()
 	_add_winter_microdetail20()
@@ -103,6 +104,26 @@ func _hide_bad_door20(node: Node) -> void:
 			if absf(p.x+6.28) < 0.22 and absf(p.z-6.45) < 0.22 and p.y > 0.8 and p.y < 1.8:
 				m.visible = false
 		_hide_bad_door20(child)
+
+func _fix_school_entry_collision20() -> void:
+	# Visual doorway alone is not enough: the original front-wall collision boxes
+	# overlap the entrance. Disable only the front-wall bodies that cover x=-5.
+	if _school_root == null:
+		return
+	_disable_entry_blockers20(_school_root)
+	# Keep a short collision-free vestibule all the way across the facade plane.
+	# Cutaway activates as soon as the player crosses the threshold.
+	print("ROSVIK_SCHOOL_ENTRY_COLLISION_21_READY")
+
+func _disable_entry_blockers20(node: Node) -> void:
+	for child: Node in node.get_children():
+		if child is StaticBody3D:
+			var body := child as StaticBody3D
+			var gp := body.global_position
+			if gp.z > 5.65 and gp.z < 6.35 and gp.x > -8.0 and gp.x < -2.0:
+				body.collision_layer = 0
+				body.collision_mask = 0
+		_disable_entry_blockers20(child)
 
 func _add_schoolyard_life20() -> void:
 	if _school_root == null:

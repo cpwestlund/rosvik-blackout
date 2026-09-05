@@ -23,7 +23,7 @@ namespace Rosvik.Blackout {
         }
 
         void Update() {
-            var keyboard = Keyboard.current;
+            Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return;
             if (!viewCamera) viewCamera = Camera.main;
 
@@ -35,20 +35,22 @@ namespace Rosvik.Blackout {
             Vector3 input = new Vector3(x, 0f, z);
             if (input.sqrMagnitude > 1f) input.Normalize();
 
-            // Movement is camera-relative. W always means "up/away" on screen,
-            // A/D always feel left/right regardless of camera yaw.
-            Vector3 forward = Vector3.forward;
-            Vector3 right = Vector3.right;
-            if (viewCamera) {
-                forward = viewCamera.transform.forward;
-                right = viewCamera.transform.right;
-                forward.y = 0f;
-                right.y = 0f;
-                if (forward.sqrMagnitude > .001f) forward.Normalize();
-                if (right.sqrMagnitude > .001f) right.Normalize();
+            // Derive the movement basis from actual screen-space rays projected onto the
+            // player's ground plane. This guarantees that W is visually straight up on the
+            // screen and D is visually straight right, even with an isometric yaw/pitch.
+            Vector3 screenUp = Vector3.forward;
+            Vector3 screenRight = Vector3.right;
+            if (!TryGetScreenGroundBasis(out screenUp, out screenRight) && viewCamera) {
+                screenUp = viewCamera.transform.forward;
+                screenRight = viewCamera.transform.right;
+                screenUp.y = 0f;
+                screenRight.y = 0f;
+                if (screenUp.sqrMagnitude > .001f) screenUp.Normalize();
+                if (screenRight.sqrMagnitude > .001f) screenRight.Normalize();
             }
 
-            Vector3 desiredDirection = forward * input.z + right * input.x;
+            Vector3 desiredDirection = screenUp * input.z + screenRight * input.x;
+            desiredDirection.y = 0f;
             if (desiredDirection.sqrMagnitude > 1f) desiredDirection.Normalize();
 
             bool sprinting = keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed;
@@ -71,6 +73,40 @@ namespace Rosvik.Blackout {
                 float t = 1f - Mathf.Exp(-turnSharpness * Time.deltaTime);
                 transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, t);
             }
+        }
+
+        bool TryGetScreenGroundBasis(out Vector3 screenUp, out Vector3 screenRight) {
+            screenUp = Vector3.forward;
+            screenRight = Vector3.right;
+            if (!viewCamera) return false;
+
+            Plane ground = new Plane(Vector3.up, new Vector3(0f, transform.position.y, 0f));
+            if (!GroundHit(viewCamera.ViewportPointToRay(new Vector3(.5f, .5f, 0f)), ground, out Vector3 center)) return false;
+            if (!GroundHit(viewCamera.ViewportPointToRay(new Vector3(.5f, .62f, 0f)), ground, out Vector3 up)) return false;
+            if (!GroundHit(viewCamera.ViewportPointToRay(new Vector3(.62f, .5f, 0f)), ground, out Vector3 right)) return false;
+
+            screenUp = up - center;
+            screenRight = right - center;
+            screenUp.y = 0f;
+            screenRight.y = 0f;
+            if (screenUp.sqrMagnitude < .0001f || screenRight.sqrMagnitude < .0001f) return false;
+            screenUp.Normalize();
+            screenRight.Normalize();
+
+            // Remove tiny numerical skew so diagonals retain equal speed and the four
+            // cardinal keys remain visually perpendicular on screen.
+            screenRight = Vector3.Cross(Vector3.up, screenUp).normalized;
+            Vector3 projectedRight = right - center;
+            projectedRight.y = 0f;
+            if (Vector3.Dot(screenRight, projectedRight) < 0f) screenRight = -screenRight;
+            return true;
+        }
+
+        static bool GroundHit(Ray ray, Plane ground, out Vector3 point) {
+            point = Vector3.zero;
+            if (!ground.Raycast(ray, out float distance)) return false;
+            point = ray.GetPoint(distance);
+            return true;
         }
     }
 }

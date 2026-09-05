@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
 
 namespace Rosvik.Blackout.EditorTools {
     /// <summary>
@@ -30,28 +31,50 @@ namespace Rosvik.Blackout.EditorTools {
             EditorApplication.update += TryApply;
         }
 
+        static bool EditorBusyOrPlaying() {
+            return EditorApplication.isPlaying
+                || EditorApplication.isPlayingOrWillChangePlaymode
+                || EditorApplication.isCompiling
+                || EditorApplication.isUpdating;
+        }
+
         static void TryApply() {
             if (EditorPrefs.GetInt(Key, 0) >= Version && File.Exists(ScenePath)) {
                 EditorApplication.update -= TryApply;
                 return;
             }
-            if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling || EditorApplication.isUpdating)
-                return;
-            if (!File.Exists(ScenePath)) return;
+            if (EditorBusyOrPlaying() || !File.Exists(ScenePath)) return;
 
-            var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-            GameObject root = GameObject.Find("ROSVIK_CLEAN_GROUNDED_V24")
-                           ?? GameObject.Find("ROSVIK_GROUNDED_PASS_V23")
-                           ?? GameObject.Find("ROSVIK_HERO_SLICE_V22")
-                           ?? GameObject.Find(RootName);
-            if (!root) return;
+            // Prefer the scene that is already open. Calling EditorSceneManager.OpenScene while
+            // Unity is crossing into Play Mode causes the InvalidOperationException seen in V25.
+            Scene scene = EditorSceneManager.GetActiveScene();
+            GameObject root = FindRoot();
+
+            if (!root) {
+                if (EditorBusyOrPlaying()) return;
+                if (scene.path != ScenePath) {
+                    scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+                    if (EditorBusyOrPlaying()) return;
+                }
+                root = FindRoot();
+            }
+            if (!root || EditorBusyOrPlaying()) return;
 
             EditorApplication.update -= TryApply;
             Apply(scene, root);
         }
 
-        static void Apply(UnityEngine.SceneManagement.Scene scene, GameObject root) {
+        static GameObject FindRoot() {
+            return GameObject.Find("ROSVIK_CLEAN_GROUNDED_V24")
+                ?? GameObject.Find("ROSVIK_GROUNDED_PASS_V23")
+                ?? GameObject.Find("ROSVIK_HERO_SLICE_V22")
+                ?? GameObject.Find(RootName);
+        }
+
+        static void Apply(Scene scene, GameObject root) {
             try {
+                if (EditorBusyOrPlaying()) return;
+
                 Transform player = Find(root.transform, "PLAYER");
                 Camera cam = Camera.main;
                 if (cam) {
@@ -77,7 +100,6 @@ namespace Rosvik.Blackout.EditorTools {
                     }
                 }
 
-                // Keep lighting readable at the steeper camera angle.
                 RenderSettings.ambientMode = AmbientMode.Flat;
                 RenderSettings.ambientLight = new Color(.44f,.455f,.405f);
                 foreach (Light light in UnityEngine.Object.FindObjectsByType<Light>(FindObjectsSortMode.None)) {
@@ -94,9 +116,12 @@ namespace Rosvik.Blackout.EditorTools {
                 root.name = RootName;
                 EditorPrefs.SetInt(Key, Version);
                 Selection.activeObject = null;
-                EditorSceneManager.MarkSceneDirty(scene);
-                EditorSceneManager.SaveScene(scene, ScenePath);
-                AssetDatabase.SaveAssets();
+
+                if (!EditorBusyOrPlaying()) {
+                    EditorSceneManager.MarkSceneDirty(scene);
+                    EditorSceneManager.SaveScene(scene, ScenePath);
+                    AssetDatabase.SaveAssets();
+                }
                 Debug.Log("ROSVIK V25: gameplay camera reframed and character T-pose fallback enabled. Geography/assets unchanged.");
             } catch (Exception ex) {
                 Debug.LogError("ROSVIK V25 FAILED: " + ex);

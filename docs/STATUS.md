@@ -9,3 +9,16 @@ are restored here; existing main/Unity work is not overwritten remotely.
 Next deliverable: data-driven contextual loot with mass, volume and condition,
 then persistent inventory and mission save. Preserve the winter art baseline.
 Do not call this a finished game. Read MALBILD.md for acceptance criteria.
+
+## Loot checkpoint implemented
+
+56 catalog definitions; 18 types placed in van/refuge. I opens inventory and
+nearby storage, transfers one item, retains condition, enforces 18 kg / 28 l.
+Mission/position/container saves, backup recovery and confirmed restart added.
+School lighting and engine restore correctly for later mission stages.
+Gameplay tests cover transfers, capacity, rejected state, corrupt save backup,
+world roundtrip, UI pause/range and the entire original walking mission.
+No graphics geometry/material/camera changes in this checkpoint.
+
+Next: a garage with visible contextual objects, then actual item uses and
+survival needs. Catalog entries are not proof of finished object functionality.

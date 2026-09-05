@@ -19,3 +19,22 @@ Check logs for SCRIPT ERROR and ERROR as well as process status.
 
 The current game remains a short slice. No completed campaign, interiors,
 survival economy, NPCs or final-quality character/vehicle assets yet.
+
+## Loot checkpoint
+
+Press I near the service van or refuge to transfer individual items. Elsewhere
+I shows your pack. Capacity is 18 kg / 28 l. Condition is retained per stack.
+The 56-entry catalog includes 18 types placed in two containers; other entries
+are reserved for future locations. There are no use/consume/repair actions yet.
+The mission battery remains the original separate carry interaction.
+
+Autosave persists position, mission stage and all container/pack contents.
+It saves on transfer, mission progress, every 30 seconds and window/menu exit.
+A backup is retained and loaded when the primary save is invalid. Restart
+requires confirmation. Tests bypass real saves and use dedicated temporary paths.
+
+Additional checks:
+```
+godot --headless --path . --script winter/tests/loot_test.gd
+godot --headless --path . --quit-after 120 -- --inventory-test
+```

@@ -1,0 +1,30 @@
+ROSVIK / BLACKOUT — Vinter + föremål, första steget
+
+Packa upp hela zipfilen och starta ROSVIK_BLACKOUT_WINTER.exe.
+WASD/pilar: gå. Shift: spring. Håll E: utför uppdraget.
+I: ryggsäck. Nära servicebilen eller värmepunkten öppnas även dess förråd.
+Markera ett föremål och välj Ta eller Lägg här. Ett exemplar flyttas åt gången.
+F: ficklampa. Mushjul: zoom. Esc: paus. F2: dölj/visa gränssnittet.
+
+Uppdrag: hämta batteriet vid servicebilen, bär det till generatorn,
+starta den, slå på skolans reservmatning och återvänd till entrén.
+
+Ryggsäcken rymmer 28 liter och högst 18 kg. Föremål har individuellt skick.
+Din position, uppdragssteg och förråd sparas automatiskt var 30:e sekund,
+vid föremålsflytt, vid uppdragssteg och när du avslutar. Nästa start fortsätter
+sparningen. Pausmenyns Börja om startar en ny omgång efter bekräftelse.
+Sparfil: %APPDATA%\Godot\app_userdata\Rosvik_ Blackout\winter_save_v1.json
+Den exakta mappen kan variera med Godots sanering av projektnamnet.
+
+56 föremålstyper finns i katalogen; 18 typer är placerade i de två förråden.
+Föremålen kan ännu samlas och lagras. Förbrukning, reparation, garage,
+full överlevnad och kampanj ingår inte i denna version.
+Batteriet för första uppdraget bärs separat som tidigare.
+
+Om standardgrafiken inte startar: använd STARTA_KOMPATIBILITET.cmd.
+Windows-bygget är exporterad Godot 4.6.3. Spelregler och uppdragsväg har
+kontrollerats automatiskt; din Windows-maskins prestanda är inte verifierad.
+
+Kartdata © OpenStreetMap contributors, ODbL 1.0:
+https://www.openstreetmap.org/copyright
+Godot Engine: https://godotengine.org/license/

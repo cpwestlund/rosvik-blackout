@@ -1,5 +1,13 @@
 extends Node3D
 
+const Loot = preload("res://winter/scripts/loot.gd")
+const InventoryUI = preload("res://winter/scripts/inventory_ui.gd")
+const SaveGame = preload("res://winter/scripts/save_game.gd")
+var loot = Loot.new()
+var inventory = InventoryUI.new()
+var save_ready = false
+var autosave_clock = 0.0
+
 const Geometry = preload("res://winter/scripts/geometry.gd")
 const Player = preload("res://winter/scripts/player.gd")
 const Soundscape = preload("res://winter/scripts/soundscape.gd")
@@ -81,10 +89,14 @@ func _ready() -> void :
 	add_child(audio)
 	_ui()
 	set_stage(0)
+	_setup_inventory()
+	_restore_save()
+	save_ready = true
 	_merge_boxes()
 	print("WINTER_SLICE_READY buildings=", building_polygons.size(), " roads=", roads.size())
 	if "--smoke-test" in OS.get_cmdline_user_args(): call_deferred("_smoke_test")
 	if "--walk-test" in OS.get_cmdline_user_args(): call_deferred("_walk_test")
+	if "--inventory-test" in OS.get_cmdline_user_args(): call_deferred("_inventory_test")
 
 func _environment() -> void :
 	var env: = Environment.new()
@@ -583,7 +595,7 @@ func _ui() -> void :
 	toast.add_theme_font_size_override("font_size", 17)
 	hud.add_child(toast)
 	var controls: = Label.new()
-	controls.text = "WASD  Gå     SHIFT  Spring     E  Arbeta     F  Ficklampa     HJUL  Zoom     ESC  Paus"
+	controls.text = "WASD  Gå     SHIFT  Spring     E  Arbeta     I  Ryggsäck/sök     F  Lampa     HJUL  Zoom     ESC  Paus"
 	controls.position = Vector2(38, 865)
 	controls.add_theme_font_size_override("font_size", 12)
 	controls.modulate = Color("c3ced0")
@@ -604,7 +616,7 @@ func _ui() -> void :
 	label.text = "EN STUND I ROSVIK"
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(label)
-	for entry: Array in [["Fortsätt", _toggle_pause], ["Börja om", _restart], ["Avsluta", _quit]]:
+	for entry: Array in [["Fortsätt", _toggle_pause], ["Börja om", _confirm_restart], ["Avsluta", _quit]]:
 		var button: = Button.new()
 		button.text = entry[0]
 		button.pressed.connect(entry[1])
@@ -612,13 +624,18 @@ func _ui() -> void :
 	pause_panel.visible = false
 	_message("Skolan är kall. Servicebilen vid ishallen har ett reservbatteri.", 8.0)
 
-func _unhandled_input(event: InputEvent) -> void :
+func _input(event: InputEvent) -> void :
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_ESCAPE: _toggle_pause()
-		if event.keycode == KEY_F2:
+		if event.keycode == KEY_I:
+			_toggle_inventory()
+			return
+		if event.keycode == KEY_ESCAPE:
+			if inventory.visible: _toggle_inventory()
+			else: _toggle_pause()
+		if event.keycode == KEY_F2 and not paused:
 			hide_hud = not hide_hud
 			hud.visible = not hide_hud
-	if event is InputEventMouseButton and event.pressed:
+	if event is InputEventMouseButton and event.pressed and not paused:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP: zoom = maxf(18.0, zoom - 2.0)
 		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN: zoom = minf(55.0, zoom + 2.0)
 
@@ -628,6 +645,10 @@ func _process(delta: float) -> void :
 		time += delta
 		_update_camera(delta)
 		_interaction(delta)
+		autosave_clock += delta
+		if autosave_clock >= 30.0:
+			autosave_clock = 0.0
+			_save_progress()
 		toast_time -= delta
 		toast.visible = toast_time > 0.0
 	if "--capture" in OS.get_cmdline_user_args():
@@ -649,10 +670,12 @@ func _interaction(delta: float) -> void :
 	var verb: = "Ta upp batteriet" if stage == 0 else "Montera batteriet" if stage == 1 else "Starta reservkraften" if stage == 2 else "Slå på reservmatningen" if stage == 3 else "Stanna vid värmepunkten"
 	if stage == 5:
 		hint.text = "Värmen är tillbaka. Ta en stund och utforska Rosvik."
+		if _nearest_container() != "": hint.text += "   ·   I  Sök förrådet"
 		progress.visible = false
 		return
 	var near: = distance < 2.5
 	hint.text = "Håll E  ·  " + verb if near else "%s  ·  %d m" % [verb, int(distance)]
+	if _nearest_container() != "": hint.text += "   ·   I  Sök förrådet"
 	player.working = near and Input.is_action_pressed("interact")
 	if player.working:
 		hold_time += delta
@@ -675,7 +698,7 @@ func set_stage(value: int) -> void :
 		create_tween().tween_property(generator_lid, "rotation:x", -1.1, 0.7)
 		_message("Batteriet väger. Du rör dig långsammare medan du bär det.")
 	if stage == 2: create_tween().tween_property(generator_lid, "rotation:x", 0.0, 0.6)
-	if stage == 3:
+	if stage >= 3:
 		audio.start_engine()
 		generator_lamp.light_energy = 1.5
 		_message("Motorn tar. Kabeln ligger redan framdragen längs skolans gavel.")
@@ -686,6 +709,8 @@ func set_stage(value: int) -> void :
 	if stage == 5:
 		completed = true
 		_message("Första natten med reservkraft. Rosvik håller ihop.", 10.0)
+
+	if save_ready: _save_progress()
 
 func _message(text: String, duration: float = 5.0) -> void :
 	toast.text = text
@@ -707,10 +732,22 @@ func _toggle_pause() -> void :
 	audio.wind.stream_paused = paused
 	audio.machine.stream_paused = paused
 
+func _confirm_restart() -> void:
+	var dialog = ConfirmationDialog.new()
+	dialog.dialog_text = "Börja om från första uppdraget? Din sparade omgång ersätts."
+	dialog.confirmed.connect(_restart)
+	dialog.canceled.connect(dialog.queue_free)
+	hud.add_child(dialog)
+	dialog.popup_centered()
+
 func _restart() -> void :
+	for suffix: String in ["", ".bak", ".tmp"]:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveGame.SAVE_PATH + suffix))
+	save_ready = false
 	get_tree().reload_current_scene()
 
 func _quit() -> void :
+	_save_progress()
 	get_tree().quit()
 
 func _merge_boxes() -> void :
@@ -821,4 +858,91 @@ func _walk_test() -> void :
 	if not await _walk_to(REFUGE_POS): return
 	if not await _hold_interact(5): return
 	print("WINTER_WALK_OK actual_movement=true all_interactions=true")
+	get_tree().quit()
+
+func _setup_inventory() -> void:
+	hud.add_child(inventory)
+	inventory.closed.connect(_toggle_inventory)
+	inventory.transferred.connect(_save_progress)
+	get_tree().auto_accept_quit = false
+
+func _nearest_container() -> String:
+	if player.position.distance_to(BATTERY_POS) < 3.0: return "van"
+	if player.position.distance_to(REFUGE_POS) < 3.0: return "refuge"
+	return ""
+
+func _toggle_inventory() -> void:
+	if paused and not inventory.visible: return
+	if inventory.visible:
+		inventory.hide()
+		paused = false
+		player.paused = false
+	else:
+		var id = _nearest_container()
+		paused = true
+		player.paused = true
+		player.working = false
+		hold_time = 0.0
+		inventory.open_box(loot, id, "SERVICEBILENS FÖRVARING" if id == "van" else "FÖRRÅD VID VÄRMEPUNKTEN")
+
+func _is_test() -> bool:
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.ends_with("-test") or arg == "--capture": return true
+	return false
+
+func _save_progress(path: String = SaveGame.SAVE_PATH) -> void:
+	if not save_ready or (_is_test() and path == SaveGame.SAVE_PATH): return
+	var p = player.position
+	var data = {"version": 1, "stage": stage, "position": [p.x, p.y, p.z], "loot": loot.snapshot()}
+	if not SaveGame.write(data, path): _message("Kunde inte spara. Kontrollera ledigt utrymme.", 8.0)
+
+func _restore_save(source: String = SaveGame.SAVE_PATH) -> void:
+	if _is_test() and source == SaveGame.SAVE_PATH: return
+	for path: String in [source, source + ".bak"]:
+		var data: Dictionary = SaveGame.read_file(path)
+		if data.is_empty(): continue
+		var point = Vector2(data.position[0], data.position[2])
+		var blocked = false
+		for polygon: PackedVector2Array in building_polygons:
+			if Geometry2D.is_point_in_polygon(point, polygon): blocked = true
+		if blocked or not loot.restore(data.loot): continue
+		set_stage(int(data.stage))
+		player.position = Vector3(data.position[0], data.position[1], data.position[2])
+		camera_target = player.position + Vector3(0, 0.8, -3)
+		_update_camera(1.0)
+		_message("Din sparade omgång har laddats.")
+		return
+	if FileAccess.file_exists(source):
+		_message("Sparningen kunde inte läsas. En ny omgång har startats.", 10.0)
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST: _quit()
+
+func _inventory_test() -> void:
+	player.position = BATTERY_POS
+	_toggle_inventory()
+	assert(paused and player.paused and inventory.visible)
+	assert(inventory.container_id == "van")
+	inventory.box_list.select(0)
+	inventory._transfer(true)
+	assert(loot.pack.size() == 1)
+	assert(inventory.pack_list.item_count == 1)
+	_toggle_inventory()
+	assert(not paused and not player.paused and not inventory.visible)
+	player.position = Vector3(-30, 0, 63)
+	_toggle_inventory()
+	assert(inventory.container_id == "" and inventory.take.disabled and inventory.put.disabled)
+	_toggle_inventory()
+	set_stage(4)
+	assert(audio.machine.playing and powered_root.visible and not player.carrying)
+	var path = "user://winter_world_automated_test.json"
+	player.position = REFUGE_POS
+	_save_progress(path)
+	loot.pack.clear()
+	player.position = BATTERY_POS
+	_restore_save(path)
+	assert(loot.pack.size() == 1 and player.position == REFUGE_POS and stage == 4)
+	for suffix: String in ["", ".bak", ".tmp"]:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(path + suffix))
+	print("WINTER_INVENTORY_OK ui_transfer=true pause=true range=true restored_power=true world_save=true")
 	get_tree().quit()

@@ -28,6 +28,18 @@ jobs:
           grep -q WINTER_SMOKE_OK /tmp/smoke.log
           grep -q WINTER_WALK_OK /tmp/walk.log
           ! grep -E 'SCRIPT ERROR|^ERROR:' /tmp/import.log /tmp/smoke.log /tmp/walk.log
+      - name: Validate loot and saving
+        run: |
+          set -euo pipefail
+          /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --script winter/tests/loot_test.gd 2>&1 | tee /tmp/loot.log
+          grep -q WINTER_LOOT_OK /tmp/loot.log
+          ! grep -E 'SCRIPT ERROR|^ERROR:' /tmp/loot.log
+      - name: Validate inventory in world
+        run: |
+          set -euo pipefail
+          /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --quit-after 120 -- --inventory-test 2>&1 | tee /tmp/inventory.log
+          grep -q WINTER_INVENTORY_OK /tmp/inventory.log
+          ! grep -E 'SCRIPT ERROR|^ERROR:' /tmp/inventory.log
       - name: Install Windows template
         run: |
           wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz -O /tmp/templates.zip
@@ -37,7 +49,9 @@ jobs:
         run: |
           mkdir -p build
           /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --export-release 'Windows Desktop' build/ROSVIK_BLACKOUT_WINTER.exe
+          cp winter/LAS_MIG.txt build/
+          cp winter/STARTA_KOMPATIBILITET.cmd build/
       - uses: actions/upload-artifact@v4
         with:
-          name: ROSVIK_BLACKOUT_WINTER
-          path: build/ROSVIK_BLACKOUT_WINTER.exe
+          name: ROSVIK_BLACKOUT_WINTER_LOOT
+          path: build/

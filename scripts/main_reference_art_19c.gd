@@ -8,6 +8,9 @@ var _ortho_size19c := 15.8
 
 func _ready() -> void:
 	super._ready()
+	# 19B decorates the facade after its first cutaway scan; scan once more so
+	# snow lips, facade bands and entrance trim disappear together indoors.
+	_register_complete_front_cutaway19b()
 	_ortho_size19b = _ortho_size19c
 	if camera != null:
 		camera.size = _ortho_size19c

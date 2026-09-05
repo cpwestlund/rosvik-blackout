@@ -15,6 +15,90 @@ func _ready() -> void:
 	print("ROSVIK_INTIMATE_CAMERA_19C_READY")
 	print("ROSVIK_PATCHY_ROSVALLA_19C_READY")
 
+
+# -----------------------------------------------------------------------------
+# SCHOOL INTERIOR — AUTHORED AS A READABLE DIORAMA, NOT FULL-HEIGHT MAZE WALLS
+# -----------------------------------------------------------------------------
+func _build_school_interior19(root: Node3D) -> void:
+	var floor_mat := _textured_mat(Color("756f67"),0.93,"horizontal",96,0.011)
+	var corridor_mat := _textured_mat(Color("596568"),0.95,"noise",96,0.013)
+	var wall_mat := _mat(Color("bbbdb7"),0.97)
+	var locker_mat := _mat(Color("536d75"),0.88,0.04)
+	var notice_mat := _mat(Color("8c6748"),0.97)
+
+	# Clear floor zones.
+	_box(Vector3(30.8,0.055,3.20),corridor_mat,Vector3(0,0.16,3.72),root)
+	_box(Vector3(14.8,0.055,7.10),floor_mat,Vector3(7.8,0.16,-1.55),root)
+	_box(Vector3(11.8,0.055,7.10),floor_mat,Vector3(-8.4,0.16,-1.55),root)
+
+	# Knee-height / cutaway partitions preserve room layout without blocking the camera.
+	_solid_box(Vector3(11.6,1.05,0.18),wall_mat,Vector3(-9.9,0.68,1.92),root)
+	_solid_box(Vector3(7.0,1.05,0.18),wall_mat,Vector3(1.5,0.68,1.92),root)
+	_solid_box(Vector3(8.2,1.05,0.18),wall_mat,Vector3(12.7,0.68,1.92),root)
+	_solid_box(Vector3(0.18,1.05,7.1),wall_mat,Vector3(0.4,0.68,-1.55),root)
+
+	# Coat corridor.
+	for i: int in range(10):
+		var x := -14.3+float(i)*0.88
+		_solid_box(Vector3(0.72,1.55,0.40),locker_mat,Vector3(x,0.94,5.45),root)
+		_box(Vector3(0.18,0.035,0.03),metal_mat,Vector3(x,1.02,5.22),root)
+	_add_bench19(root,Vector3(-10.8,0.0,3.10),3.0)
+	for i: int in range(6):
+		var boot := _capsule19(0.12,0.28,_mat(Color("30383a").lightened(float(i%3)*0.04),0.99),Vector3(-13.5+float(i)*0.66,0.29,3.55+float(i%2)*0.24),root)
+		boot.rotation_degrees.x = 90.0
+	for i: int in range(4):
+		_add_backpack19(root,Vector3(-8.0+float(i)*0.64,0.32,5.05),Color("665044").lightened(float(i)*0.04))
+
+	# Notice board and drawings sit above the low partition so they remain readable.
+	_box(Vector3(3.2,1.10,0.07),notice_mat,Vector3(-3.5,1.55,2.02),root)
+	for i: int in range(8):
+		var paper_color: Color = [Color("d9d1b9"),Color("aec5d0"),Color("d5b3a1"),Color("c8c797")][i%4]
+		_box(Vector3(0.34,0.42,0.022),_mat(paper_color,0.99),Vector3(-4.65+float(i%4)*0.72,1.35+float(i/4)*0.48,2.08),root)
+
+	# Classroom tables are arranged around a central aisle. Real CC0 furniture remains.
+	for row: int in range(2):
+		for col: int in range(3):
+			var p := Vector3(4.1+float(col)*3.05,0.16,-0.25-float(row)*2.45)
+			_asset19("furniture/desk.glb",p,Vector3.ONE*0.90,0.0,root)
+			_asset19("furniture/chair.glb",p+Vector3(0,0,0.86),Vector3.ONE*0.90,PI,root)
+			_collision_box19(root,Vector3(1.35,0.85,0.72),p+Vector3(0,0.43,0))
+			_world_prop_count += 2
+
+	# Small reading / activity room on the left.
+	_asset19("furniture/bookshelf.glb",Vector3(-13.0,0.16,-4.4),Vector3.ONE*0.92,PI/2.0,root)
+	_asset19("furniture/bookshelf.glb",Vector3(-10.8,0.16,-4.4),Vector3.ONE*0.92,PI/2.0,root)
+	_add_bench19(root,Vector3(-8.5,0.0,-1.8),2.4)
+	_box(Vector3(2.0,0.10,1.15),wood_mat,Vector3(-5.2,0.65,-2.1),root)
+	for p: Vector3 in [Vector3(-5.8,0.28,-1.2),Vector3(-4.6,0.28,-1.2),Vector3(-5.8,0.28,-3.0),Vector3(-4.6,0.28,-3.0)]:
+		_asset19("furniture/chair.glb",p,Vector3.ONE*0.82,0.0,root)
+
+	# Teacher corner + visible desk clutter.
+	_asset19("furniture/desk.glb",Vector3(13.4,0.16,-3.8),Vector3.ONE,PI,root)
+	_asset19("furniture/chair.glb",Vector3(13.3,0.16,-2.9),Vector3.ONE,0.0,root)
+	_asset19("furniture/monitor.glb",Vector3(13.25,0.94,-3.65),Vector3.ONE*0.82,PI,root)
+	_asset19("furniture/lamp.glb",Vector3(12.65,0.92,-3.55),Vector3.ONE*0.80,0.0,root)
+	_add_mug19(root,Vector3(12.9,1.00,-3.30),Color("9a5e46"))
+	_add_thermos19(root,Vector3(13.55,1.04,-3.40))
+	for i: int in range(7):
+		var paper := _box(Vector3(0.40,0.018,0.28),_mat(Color("d6d2c6").darkened(float(i%3)*0.04),0.99),Vector3(3.5+float(i%4)*2.0,0.94,-0.10-float(i/4)*2.35),root)
+		paper.rotation.y = -0.18+float(i)*0.05
+
+	# Warm pools are local and lower, giving the interior depth instead of bleaching every wall.
+	for p: Vector3 in [Vector3(-10.5,2.45,3.6),Vector3(-3.0,2.45,3.6),Vector3(5.0,2.55,-1.4),Vector3(11.0,2.55,-1.4)]:
+		var light := OmniLight3D.new()
+		light.position = p
+		light.light_color = Color("ffd39a")
+		light.light_energy = 0.0
+		light.omni_range = 4.2
+		light.shadow_enabled = true
+		root.add_child(light)
+		_school_lights.append(light)
+
+	_add_searchable19(root,Vector3(-14.5,0.0,5.0),"janitor","VAKTMÄSTARSKÅP",["silvertejp","säkringar","AA-batterier"])
+	_add_searchable19(root,Vector3(13.6,0.0,-4.6),"staff","LÄRARBORD",["nyckelknippa","ficklampa","tändare"])
+	_add_searchable19(root,Vector3(8.6,0.0,-1.5),"bag","ÖVERGIVEN RYGGSÄCK",["choklad","vantar","powerbank"])
+	_world_prop_count += 28
+
 # -----------------------------------------------------------------------------
 # ROSVALLA — PATCHY WINTER FIELD, NO GIANT PARALLEL STRIPES
 # -----------------------------------------------------------------------------

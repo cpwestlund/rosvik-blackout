@@ -15,7 +15,7 @@ namespace Rosvik.Blackout.EditorTools {
         const string Root = "Assets/Rosvik/External/KenneyFurniture";
         const string ScenePath = "Assets/Rosvik/Scenes/RosvikHero.unity";
         const string Base = "https://raw.githubusercontent.com/ETdoFresh/kenney.nl/master/furniturekit_updated/Models/FBX%20format/";
-        const int BuildVersion = 5;
+        const int BuildVersion = 6;
         const string BuildVersionKey = "ROSVIK_UNITY_BOOTSTRAP_VERSION";
 
         static readonly string[] Assets = {
@@ -101,6 +101,9 @@ namespace Rosvik.Blackout.EditorTools {
             var floor=Mat("Linoleum",new Color(.29f,.34f,.34f),.15f);
             var warm=Mat("Warm window",new Color(1f,.52f,.20f),.35f,true);
             var red=Mat("Muted red",new Color(.42f,.15f,.12f),.2f);
+            var glass=Mat("Cold glass",new Color(.20f,.31f,.34f),.5f);
+            var pine=Mat("Pine",new Color(.10f,.18f,.16f),.12f);
+            var bark=Mat("Bark",new Color(.16f,.12f,.09f),.08f);
 
             Cube("Snow ground",root,Vector3.zero,new Vector3(58,.25f,44),snow);
             Cube("School road",root,new Vector3(0,.15f,14),new Vector3(46,.08f,6.2f),asphalt);
@@ -145,40 +148,51 @@ namespace Rosvik.Blackout.EditorTools {
             Prefab("lampRoundTable.fbx",school,new Vector3(13.7f,1.03f,-2.25f),Vector3.one*.8f,0);
             Prefab("rugRectangle.fbx",school,new Vector3(9.2f,.23f,-2.2f),Vector3.one*1.8f,0);
             Prefab("pottedPlant.fbx",school,new Vector3(15.4f,.22f,-.5f),Vector3.one*.9f,0);
-            Prefab("trashcan.fbx",school,new Vector3(3.2f,.22f,-4.6f),Vector3.one*.9f,0);
+            Prefab("trashcan.fbx",school,new Vector3(3.2f,.22f,-4.6f),Vector3.one*.34f,0);
 
             for(int i=0;i<4;i++) Prefab("bookcaseOpenLow.fbx",school,new Vector3(-14.6f+i*2.1f,.22f,3.65f),Vector3.one*.92f,180);
             Prefab("bench.fbx",school,new Vector3(-10.2f,.22f,2.9f),Vector3.one*.95f,90);
             Prefab("rugDoormat.fbx",school,new Vector3(-5,.23f,4.5f),Vector3.one*1.35f,0);
-            Prefab("trashcan.fbx",school,new Vector3(-7.6f,.22f,3.75f),Vector3.one*.9f,0);
+            Prefab("trashcan.fbx",school,new Vector3(-7.6f,.22f,3.75f),Vector3.one*.34f,0);
 
             var yard=new GameObject("Schoolyard dressing").transform; yard.SetParent(root);
             Prefab("bench.fbx",yard,new Vector3(-11,.25f,8.2f),Vector3.one,90);
             Prefab("bench.fbx",yard,new Vector3(8.5f,.25f,8.2f),Vector3.one,90);
-            Prefab("trashcan.fbx",yard,new Vector3(-8.2f,.25f,7.2f),Vector3.one,0);
-            Prefab("trashcan.fbx",yard,new Vector3(11.3f,.25f,7.2f),Vector3.one,0);
+            Prefab("trashcan.fbx",yard,new Vector3(-8.2f,.25f,7.2f),Vector3.one*.38f,0);
+            Prefab("trashcan.fbx",yard,new Vector3(11.3f,.25f,7.2f),Vector3.one*.38f,0);
             for(int i=0;i<3;i++) {
                 var drift=GameObject.CreatePrimitive(PrimitiveType.Sphere);
                 drift.name="Low snow drift"; drift.transform.SetParent(yard); drift.transform.localPosition=new Vector3(-14+i*10,.25f,5.8f);
                 drift.transform.localScale=new Vector3(3.8f,.32f,.95f); drift.GetComponent<Renderer>().sharedMaterial=snow; UnityEngine.Object.DestroyImmediate(drift.GetComponent<Collider>());
             }
 
-            var player=GameObject.CreatePrimitive(PrimitiveType.Capsule); player.name="PLAYER_PLACEHOLDER";
+            // Human-scale placeholder built from simple parts so scale/readability are trustworthy before art replacement.
+            var player=new GameObject("PLAYER_PLACEHOLDER");
+            var body=Cube("Coat",player.transform,new Vector3(0,1.12f,0),new Vector3(.58f,.78f,.36f),red,false);
+            var head=GameObject.CreatePrimitive(PrimitiveType.Sphere); head.name="Head"; head.transform.SetParent(player.transform); head.transform.localPosition=new Vector3(0,1.72f,0); head.transform.localScale=Vector3.one*.38f; head.GetComponent<Renderer>().sharedMaterial=Mat("Skin",new Color(.62f,.47f,.36f),.18f); UnityEngine.Object.DestroyImmediate(head.GetComponent<Collider>());
+            Cube("Leg L",player.transform,new Vector3(-.15f,.48f,0),new Vector3(.20f,.68f,.24f),dark,false);
+            Cube("Leg R",player.transform,new Vector3(.15f,.48f,0),new Vector3(.20f,.68f,.24f),dark,false);
             player.transform.SetParent(root); player.transform.localPosition=new Vector3(-5,1.1f,11.0f);
-            UnityEngine.Object.DestroyImmediate(player.GetComponent<CapsuleCollider>());
             var cc=player.AddComponent<CharacterController>(); cc.height=1.9f; cc.radius=.36f; cc.center=new Vector3(0,.95f,0);
             player.AddComponent<RosvikPlayerController>();
             var cutaway=school.gameObject.AddComponent<SchoolCutaway>(); cutaway.player=player.transform; cutaway.roof=roof.GetComponent<Renderer>(); cutaway.frontWallRenderers=new[]{frontL.GetComponent<Renderer>(),frontR.GetComponent<Renderer>()};
-            player.GetComponent<Renderer>().sharedMaterial=red;
+
+            // Hero-frame dressing: restrained Nordic conifers and snow banks, concentrated around the 30x30m entrance slice.
+            for(int i=0;i<9;i++) {
+                float x=-20f+i*5f; float z=(i%2==0)?-10.5f:18f;
+                var tree=new GameObject("Nordic spruce").transform; tree.SetParent(root); tree.localPosition=new Vector3(x,.2f,z);
+                Cube("Trunk",tree,new Vector3(0,1.4f,0),new Vector3(.22f,2.8f,.22f),bark,false);
+                for(int k=0;k<3;k++) { var crown=GameObject.CreatePrimitive(PrimitiveType.Cylinder); crown.name="Spruce crown"; crown.transform.SetParent(tree); crown.transform.localPosition=new Vector3(0,1.7f+k*.85f,0); crown.transform.localScale=new Vector3(1.45f-k*.25f,.65f,1.45f-k*.25f); crown.GetComponent<Renderer>().sharedMaterial=pine; UnityEngine.Object.DestroyImmediate(crown.GetComponent<Collider>()); }
+            }
 
             var cameraGo=new GameObject("Isometric Camera");
             var cam=cameraGo.AddComponent<Camera>(); cam.orthographic=true; cam.orthographicSize=11.5f; cam.nearClipPlane=.1f; cam.farClipPlane=150f;
             var rig=cameraGo.AddComponent<IsometricCameraRig>(); rig.target=player.transform; rig.yaw=45f; rig.pitch=48f; rig.distance=18f;
             Camera.SetupCurrent(cam);
 
-            var sun=new GameObject("Cold winter sun").AddComponent<Light>(); sun.type=LightType.Directional; sun.color=new Color(.68f,.80f,.90f); sun.intensity=1.15f;
+            var sun=new GameObject("Cold winter sun").AddComponent<Light>(); sun.type=LightType.Directional; sun.color=new Color(.68f,.80f,.90f); sun.intensity=.72f;
             sun.transform.rotation=Quaternion.Euler(43,-38,0); sun.shadows=LightShadows.Soft;
-            RenderSettings.ambientMode=AmbientMode.Flat; RenderSettings.ambientLight=new Color(.20f,.27f,.30f);
+            RenderSettings.ambientMode=AmbientMode.Flat; RenderSettings.ambientLight=new Color(.14f,.19f,.22f);
 
             EditorSceneManager.SaveScene(scene,ScenePath);
             EditorBuildSettings.scenes=new[]{new EditorBuildSettingsScene(ScenePath,true)};

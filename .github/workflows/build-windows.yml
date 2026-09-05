@@ -68,7 +68,12 @@ jobs:
             ROSVIK_DENSE_LOOT_19_READY \
             ROSVIK_REFERENCE_MOOD_19_READY \
             ROSVIK_CC0_WORLD_ASSETS_19_READY \
-            ROSVIK_BLACKOUT_LOOP_19_READY; do
+            ROSVIK_BLACKOUT_LOOP_19_READY \
+            ROSVIK_SCREEN_RELATIVE_CONTROLS_20_READY \
+            ROSVIK_VISUAL_VERTICAL_SLICE_20_READY \
+            ROSVIK_USABLE_SCHOOL_ENTRANCE_20_READY \
+            ROSVIK_ART_DENSITY_20_READY \
+            ROSVIK_NATURAL_CAMERA_CONTROLS_20_READY; do
               grep -q "$marker" runtime.log || { echo "Missing runtime marker: $marker"; cat runtime.log; exit 1; }
           done
 

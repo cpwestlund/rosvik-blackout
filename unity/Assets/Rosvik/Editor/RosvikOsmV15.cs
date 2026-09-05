@@ -14,8 +14,13 @@ namespace Rosvik.Blackout.EditorTools {
         const double OriginLon = 21.69108;
         const double MPerLat = 111320.0;
         static readonly double MPerLon = 111320.0 * Math.Cos(OriginLat * Math.PI / 180.0);
-        const string Url = "https://api.openstreetmap.org/api/0.6/map?bbox=21.6870,65.4230,21.6975,65.4300";
-        const string Cache = "Library/RosvikMapV15.osm";
+
+        // Wider capture around the school/sports complex. The earlier V15 bbox was
+        // intentionally tight, but it made the world read like a cropped test plot.
+        // V16 keeps the same metre origin but includes Rosvalla, the ice arena,
+        // surrounding roads, houses and more of the village fabric.
+        const string Url = "https://api.openstreetmap.org/api/0.6/map?bbox=21.6845,65.4215,21.7025,65.4325";
+        const string Cache = "Library/RosvikMapV16.osm";
 
         public class Node { public long Id; public Vector3 Pos; }
         public class Way {
@@ -60,7 +65,7 @@ namespace Rosvik.Blackout.EditorTools {
                     return xml;
                 }
             } catch (Exception ex) {
-                Debug.LogWarning("ROSVIK V15 OSM download failed: " + ex.Message);
+                Debug.LogWarning("ROSVIK OSM download failed: " + ex.Message);
                 return File.Exists(Cache) ? File.ReadAllText(Cache) : null;
             }
         }

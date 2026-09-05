@@ -1,7 +1,7 @@
 extends CharacterBody3D
 
 # ROSVIK: BLACKOUT — Hero Rebuild 19 player
-# Movement is intentionally world locked. Camera orientation is never consulted.
+# Movement is screen-relative: W is always visually up/forward on screen, S down/back, A left, D right.
 
 @export var walk_speed: float = 3.25
 @export var run_speed: float = 5.45
@@ -34,30 +34,46 @@ func _ready() -> void:
 	add_child(collision)
 	_build_winter_person()
 	print("ROSVIK_WORLD_LOCKED_CONTROLS_19_READY")
+	print("ROSVIK_SCREEN_RELATIVE_CONTROLS_20_READY")
 	print("ROSVIK_WINTER_PLAYER_19_READY")
 
 func _physics_process(delta: float) -> void:
-	# Explicit mapping, deliberately independent from camera yaw/pitch.
-	# W = world north (-Z), S = south (+Z), A = west (-X), D = east (+X).
+	# Natural top-down controls: keys map to the screen, not arbitrary world axes.
+	# Camera rotation therefore NEVER makes A become visual-right or W become sideways.
 	var x_axis := Input.get_action_strength("move_right") - Input.get_action_strength("move_left")
-	var z_axis := Input.get_action_strength("move_back") - Input.get_action_strength("move_forward")
-	var requested := Vector3(x_axis, 0.0, z_axis)
+	var y_axis := Input.get_action_strength("move_forward") - Input.get_action_strength("move_back")
+	var requested := Vector3.ZERO
+	var cam := get_viewport().get_camera_3d()
+	if cam != null:
+		var screen_right := cam.global_transform.basis.x
+		screen_right.y = 0.0
+		screen_right = screen_right.normalized()
+		var screen_up := -cam.global_transform.basis.z
+		screen_up.y = 0.0
+		screen_up = screen_up.normalized()
+		requested = screen_right * x_axis + screen_up * y_axis
+	else:
+		requested = Vector3(x_axis,0.0,-y_axis)
 	if requested.length() > 1.0:
 		requested = requested.normalized()
 
 	var speed := run_speed if Input.is_action_pressed("sprint") else walk_speed
 	var target := requested * speed
-	var accel := braking if requested == Vector3.ZERO else acceleration
-	velocity.x = move_toward(velocity.x, target.x, accel * delta)
-	velocity.z = move_toward(velocity.z, target.z, accel * delta)
+	var reversing := false
+	var current_horizontal := Vector3(velocity.x,0.0,velocity.z)
+	if requested.length() > 0.05 and current_horizontal.length() > 0.10:
+		reversing = current_horizontal.normalized().dot(requested) < 0.25
+	var accel := braking if requested == Vector3.ZERO else (42.0 if reversing else acceleration)
+	velocity.x = move_toward(velocity.x,target.x,accel*delta)
+	velocity.z = move_toward(velocity.z,target.z,accel*delta)
 
-	var horizontal := Vector3(velocity.x, 0.0, velocity.z)
+	var horizontal := Vector3(velocity.x,0.0,velocity.z)
 	if horizontal.length() > 0.14:
-		var target_yaw := atan2(horizontal.x, horizontal.z)
-		rotation.y = lerp_angle(rotation.y, target_yaw, 1.0 - exp(-turn_speed * delta))
+		var target_yaw := atan2(horizontal.x,horizontal.z)
+		rotation.y = lerp_angle(rotation.y,target_yaw,1.0-exp(-turn_speed*delta))
 
 	if not is_on_floor():
-		velocity.y -= 18.0 * delta
+		velocity.y -= 18.0*delta
 	move_and_slide()
 	_animate(delta)
 

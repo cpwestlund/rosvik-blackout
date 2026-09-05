@@ -104,9 +104,9 @@ namespace Rosvik.Blackout.EditorTools {
             Cube("Left gable",school,new Vector3(-17,1.8f,0),new Vector3(.25f,3.4f,10.4f),wood);
             Cube("Right gable",school,new Vector3(17,1.8f,0),new Vector3(.25f,3.4f,10.4f),wood);
             // Front wall is split around a generous real doorway.
-            Cube("Front L",school,new Vector3(-11.2f,1.8f,5.2f),new Vector3(11.6f,3.4f,.25f),wood);
-            Cube("Front R",school,new Vector3(7.1f,1.8f,5.2f),new Vector3(19.8f,3.4f,.25f),wood);
-            Cube("Roof",school,new Vector3(0,3.72f,0),new Vector3(34.6f,.28f,10.9f),dark,false);
+            var frontL=Cube("Front L",school,new Vector3(-11.2f,1.8f,5.2f),new Vector3(11.6f,3.4f,.25f),wood);
+            var frontR=Cube("Front R",school,new Vector3(7.1f,1.8f,5.2f),new Vector3(19.8f,3.4f,.25f),wood);
+            var roof=Cube("Roof",school,new Vector3(0,3.72f,0),new Vector3(34.6f,.28f,10.9f),dark,false);
             Cube("Floor",school,new Vector3(0,.08f,0),new Vector3(33.7f,.12f,10),floor);
 
             // Window rhythm + warm pockets.
@@ -168,6 +168,7 @@ namespace Rosvik.Blackout.EditorTools {
             UnityEngine.Object.DestroyImmediate(player.GetComponent<CapsuleCollider>());
             var cc=player.AddComponent<CharacterController>(); cc.height=1.9f; cc.radius=.36f; cc.center=new Vector3(0,.95f,0);
             player.AddComponent<RosvikPlayerController>();
+            var cutaway=school.gameObject.AddComponent<SchoolCutaway>(); cutaway.player=player.transform; cutaway.roof=roof.GetComponent<Renderer>(); cutaway.frontWallRenderers=new[]{frontL.GetComponent<Renderer>(),frontR.GetComponent<Renderer>()};
             player.GetComponent<Renderer>().sharedMaterial=red;
 
             // Camera.

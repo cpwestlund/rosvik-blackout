@@ -54,6 +54,7 @@ namespace Rosvik.Blackout {
         }
 
         void Collect(int index) {
+            PulseCharacter(.46f);
             collected[index] = true;
             if (pickups[index]) pickups[index].gameObject.SetActive(false);
         }
@@ -71,8 +72,15 @@ namespace Rosvik.Blackout {
         }
 
         void RestorePower() {
+            PulseCharacter(.68f);
             restored = true;
             SetLights(true);
+        }
+
+        void PulseCharacter(float duration) {
+            if (!player) return;
+            RosvikCharacterDriver driver = player.GetComponent<RosvikCharacterDriver>();
+            if (driver) driver.PulseInteract(duration);
         }
 
         void SetLights(bool on) {

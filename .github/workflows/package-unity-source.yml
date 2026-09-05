@@ -1,0 +1,22 @@
+name: Package Unity Reboot
+
+on:
+  push:
+    branches: [ unity-reboot ]
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package clean Unity project
+        run: |
+          cd unity
+          zip -r ../ROSVIK_BLACKOUT_UNITY_REBOOT_SOURCE.zip . -x "Library/*" "Temp/*" "Logs/*" "obj/*"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ROSVIK_BLACKOUT_UNITY_REBOOT_SOURCE
+          path: ROSVIK_BLACKOUT_UNITY_REBOOT_SOURCE.zip
+          if-no-files-found: error
+          retention-days: 30

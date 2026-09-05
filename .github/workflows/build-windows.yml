@@ -8,26 +8,28 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch CC0 art assets
+      - name: Fetch Hero 19 CC0 assets
+        shell: bash
         run: |
-          mkdir -p assets/vendor/Textures assets/vendor/character/Textures
-          wget -q -O assets/vendor/tree_pine.glb https://raw.githubusercontent.com/syuhei176/ai-game-assets/main/models/environment/tree_pine.glb
-          wget -q -O assets/vendor/rock_large.glb https://raw.githubusercontent.com/syuhei176/ai-game-assets/main/models/environment/rock_large.glb
-          wget -q -O assets/vendor/vehicle-truck-green.glb https://raw.githubusercontent.com/KenneyNL/Starter-Kit-Racing/main/models/vehicle-truck-green.glb
-          wget -q -O assets/vendor/Textures/colormap.png https://raw.githubusercontent.com/KenneyNL/Starter-Kit-Racing/main/models/Textures/colormap.png
-          wget -q -O assets/vendor/character/kenney_character.glb https://raw.githubusercontent.com/KenneyNL/Starter-Kit-3D-Platformer/main/models/character.glb
-          wget -q -O assets/vendor/character/Textures/colormap.png https://raw.githubusercontent.com/KenneyNL/Starter-Kit-3D-Platformer/main/models/Textures/colormap.png
-          test -s assets/vendor/tree_pine.glb
-          test -s assets/vendor/rock_large.glb
-          test -s assets/vendor/vehicle-truck-green.glb
-          test -s assets/vendor/Textures/colormap.png
-          test -s assets/vendor/character/kenney_character.glb
-          test -s assets/vendor/character/Textures/colormap.png
+          set -euo pipefail
+          BASE="https://raw.githubusercontent.com/AryaaSk/Zootropolis/main/paperclip-master/ui/public/assets/zootropolis"
+          mkdir -p assets/vendor19/nature assets/vendor19/furniture assets/vendor19/buildings
+          wget -q -O assets/vendor19/nature/tree-pine.glb "$BASE/nature/tree-pine.glb"
+          wget -q -O assets/vendor19/nature/bush.glb "$BASE/nature/bush.glb"
+          wget -q -O assets/vendor19/nature/rock.glb "$BASE/nature/rock.glb"
+          wget -q -O assets/vendor19/nature/lamppost.glb "$BASE/nature/lamppost.glb"
+          wget -q -O assets/vendor19/furniture/desk.glb "$BASE/furniture/desk.glb"
+          wget -q -O assets/vendor19/furniture/chair.glb "$BASE/furniture/chair.glb"
+          wget -q -O assets/vendor19/furniture/bookshelf.glb "$BASE/furniture/bookshelf.glb"
+          wget -q -O assets/vendor19/furniture/monitor.glb "$BASE/furniture/monitor.glb"
+          wget -q -O assets/vendor19/furniture/lamp.glb "$BASE/furniture/lamp.glb"
+          wget -q -O assets/vendor19/buildings/small-house.glb "$BASE/buildings/small-house.glb"
+          find assets/vendor19 -type f -name '*.glb' -size +100c | wc -l | grep -q '^10$'
 
       - name: Download Godot 4.6.3 and export templates
         run: |
@@ -35,8 +37,7 @@ jobs:
           wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz
           unzip -q Godot_v4.6.3-stable_linux.x86_64.zip
           chmod +x Godot_v4.6.3-stable_linux.x86_64
-          mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable"
-          mkdir -p /tmp/godot_templates
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable" /tmp/godot_templates
           unzip -q Godot_v4.6.3-stable_export_templates.tpz -d /tmp/godot_templates
           cp -r /tmp/godot_templates/templates/* "$HOME/.local/share/godot/export_templates/4.6.3.stable/"
 
@@ -48,7 +49,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          ./Godot_v4.6.3-stable_linux.x86_64 --headless --path . --quit-after 12 2>&1 | tee runtime.log
+          ./Godot_v4.6.3-stable_linux.x86_64 --headless --path . --quit-after 10 2>&1 | tee runtime.log
           godot_status=${PIPESTATUS[0]}
           set -e
           if grep -E "SCRIPT ERROR|Parse Error|Invalid assignment|Invalid call|ERROR:" runtime.log; then
@@ -56,16 +57,51 @@ jobs:
             exit 1
           fi
           if [ "$godot_status" -ne 0 ]; then
-            echo "Godot runtime exited with status $godot_status"
             exit "$godot_status"
           fi
-          for marker in ROSVIK_ART_READY ROSVIK_ANIMATIONS_READY ROSVIK_CHARACTER_PROCEDURAL_READY ROSVIK_VISUAL_FOUNDATION_READY ROSVIK_INTERIOR_CLEANUP_READY ROSVIK_SCALE_PASS_READY ROSVIK_CAMERA_PASS_READY ROSVIK_ACCURACY_02_READY ROSVIK_MULTI_CLASSROOM_READY ROSVIK_SNOW_PASSABLE_READY ROSVIK_SPORTHALL_READY ROSVIK_ICEHALL_SEPARATED_READY ROSVIK_DYNAMIC_CUTAWAY_READY ROSVIK_ARCHITECTURAL_COHESION_READY ROSVIK_DOOR_ALIGNMENT_READY ROSVIK_WALL_TOPOLOGY_READY ROSVIK_CAMERA_COHESION_READY ROSVIK_WORLD_BELIEVABILITY_04_READY ROSVIK_INTERACTIVE_DOORS_READY ROSVIK_APOCALYPSE_MOOD_READY ROSVIK_ART_REPLACEMENT_READY ROSVIK_WORLD_COHERENCE_05_READY ROSVIK_ROAD_NETWORK_READY ROSVIK_FLICKER_CLEANUP_READY ROSVIK_EXTERIOR_LINKAGE_READY ROSVIK_SPATIAL_SANITY_06_READY ROSVIK_BUILDING_MASKS_READY ROSVIK_SAFE_PLACEMENT_READY ROSVIK_CUTAWAY_REPAIR_READY ROSVIK_ROAD_AVOIDANCE_READY ROSVIK_SPATIAL_SANITY_06_1_READY ROSVIK_WORLD_INTEGRITY_07_READY ROSVIK_STRUCTURE_FOOTPRINTS_READY ROSVIK_CUTAWAY_BOUNDARIES_READY ROSVIK_BACKGROUND_SAFE_READY ROSVIK_DETAIL_STORYTELLING_08_READY ROSVIK_VEHICLE_DETAIL_READY ROSVIK_WALL_DRESSING_READY ROSVIK_ENVIRONMENTAL_STORY_READY ROSVIK_ROAD_TOPOLOGY_09_READY ROSVIK_JUNCTION_GRAPH_READY ROSVIK_ZFIGHT_CLEANUP_09_READY ROSVIK_PEDESTRIAN_COHERENCE_09_READY ROSVIK_GAMEPLAY_FOUNDATION_10_READY ROSVIK_PICKUP_SYSTEM_READY ROSVIK_CARRY_SYSTEM_READY ROSVIK_BLACKOUT_LOOP_READY ROSVIK_POWER_REACTION_READY ROSVIK_WORLD_EXPANSION_11_READY ROSVIK_PROP_COLLISION_11_READY ROSVIK_SEARCHABLE_LOOT_11_READY ROSVIK_FLASHLIGHT_11_READY ROSVIK_INTERACTION_DEPTH_11_READY ROSVIK_CAMERA_ORBIT_12_READY ROSVIK_CAMERA_OCCLUSION_12_READY ROSVIK_RESIDENTIAL_LIFE_12_READY ROSVIK_YARD_STORYTELLING_12_READY ROSVIK_CAMERA_RELATIVE_MOVEMENT_13_READY ROSVIK_DIRECTION_STABILITY_13_READY ROSVIK_ROAD_PROP_CLEARANCE_13_READY ROSVIK_PRESENTATION_CLEANUP_13_READY ROSVIK_CONTROL_FEEL_14_READY ROSVIK_DIEGETIC_SIGNAGE_14_READY ROSVIK_FLOATING_SIGN_CLEANUP_14_READY ROSVIK_FRONT_FENCE_REBUILD_14_READY ROSVIK_EXPLORATION_SURVIVAL_15_READY ROSVIK_WEIGHT_INVENTORY_15_READY ROSVIK_WARMTH_SYSTEM_15_READY ROSVIK_CONSUMABLES_15_READY ROSVIK_WARM_REFUGE_15_READY ROSVIK_WORLD_AXIS_WASD_16_READY ROSVIK_VISUAL_IDENTITY_16_READY ROSVIK_ROUNDED_HUD_16_READY ROSVIK_SOFT_WORLD_FORMS_16_READY ROSVIK_FLOATING_CLEANUP_16_READY ROSVIK_RESIDENTIAL_SILHOUETTE_16_READY ROSVIK_AUTHENTIC_SLICE_17_READY ROSVIK_REFERENCE_LED_SCHOOL_17_READY ROSVIK_LIVED_INTERIORS_17_READY ROSVIK_DENSE_LOOT_17_READY ROSVIK_COLD_WARM_CONTRAST_17_READY ROSVIK_WORLD_LOCKED_CONTROLS_17_READY ROSVIK_CONTROL_REWRITE_18_READY ROSVIK_CC0_CHARACTER_18_READY ROSVIK_AUTHENTIC_REBUILD_18_READY ROSVIK_NATURAL_CAMERA_18_READY ROSVIK_CLEAN_ROADS_18_READY ROSVIK_ROSVALLA_FIVE_PITCH_18_READY ROSVIK_GROUNDED_WORLD_18_READY ROSVIK_CC0_ASSETS_18_READY; do
-            if ! grep -q "$marker" runtime.log; then
-              echo "Missing runtime marker: $marker"
-              cat runtime.log
-              exit 1
-            fi
+          for marker in \
+            ROSVIK_HERO_REBUILD_19_READY \
+            ROSVIK_STANDALONE_WORLD_19_READY \
+            ROSVIK_WORLD_LOCKED_CONTROLS_19_READY \
+            ROSVIK_WINTER_PLAYER_19_READY \
+            ROSVIK_SCHOOL_COMPLEX_19_READY \
+            ROSVIK_SOLID_FACADE_19_READY \
+            ROSVIK_ROSVALLA_SINGLE_FIELD_19_READY \
+            ROSVIK_LIVED_INTERIOR_19_READY \
+            ROSVIK_DENSE_LOOT_19_READY \
+            ROSVIK_REFERENCE_MOOD_19_READY \
+            ROSVIK_CC0_WORLD_ASSETS_19_READY \
+            ROSVIK_BLACKOUT_LOOP_19_READY; do
+              grep -q "$marker" runtime.log || { echo "Missing runtime marker: $marker"; cat runtime.log; exit 1; }
           done
+
+      - name: Render visual acceptance captures
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb >/dev/null
+          mkdir -p build/captures
+          set +e
+          xvfb-run -a ./Godot_v4.6.3-stable_linux.x86_64 --rendering-method gl_compatibility --path . -- --capture-hero 2>&1 | tee capture.log
+          godot_status=${PIPESTATUS[0]}
+          set -e
+          if grep -E "SCRIPT ERROR|Parse Error|Invalid assignment|Invalid call|ERROR:" capture.log; then
+            cat capture.log
+            exit 1
+          fi
+          [ "$godot_status" -eq 0 ] || exit "$godot_status"
+          grep -q ROSVIK_VISUAL_CAPTURE_19_READY capture.log
+          test -s build/captures/01_school_exterior.png
+          test -s build/captures/02_school_sport_rosvalla.png
+          test -s build/captures/03_school_interior.png
+
+      - name: Upload Hero 19 captures
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROSVIK_BLACKOUT_HeroCaptures19
+          path: build/captures/*.png
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Export Windows build
         run: |

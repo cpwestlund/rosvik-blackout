@@ -18,7 +18,7 @@ jobs:
         run: |
           set -euo pipefail
           BASE="https://raw.githubusercontent.com/AryaaSk/Zootropolis/main/paperclip-master/ui/public/assets/zootropolis"
-          mkdir -p assets/vendor19/nature assets/vendor19/furniture assets/vendor19/buildings
+          mkdir -p assets/vendor19/nature assets/vendor19/furniture assets/vendor19/buildings assets/vendor19/realistic
           wget -q -O assets/vendor19/nature/tree-pine.glb "$BASE/nature/tree-pine.glb"
           wget -q -O assets/vendor19/nature/bush.glb "$BASE/nature/bush.glb"
           wget -q -O assets/vendor19/nature/rock.glb "$BASE/nature/rock.glb"
@@ -29,7 +29,13 @@ jobs:
           wget -q -O assets/vendor19/furniture/monitor.glb "$BASE/furniture/monitor.glb"
           wget -q -O assets/vendor19/furniture/lamp.glb "$BASE/furniture/lamp.glb"
           wget -q -O assets/vendor19/buildings/cottage.glb "$BASE/buildings/cottage.glb"
-          test "$(find assets/vendor19 -type f -name '*.glb' -size +100c | wc -l)" -eq 10
+          LIMINAL="https://raw.githubusercontent.com/TheMarco/liminal/f8dbe64ac3a16bc8b1176c3d8f649902bd6a3707/models/cc_by"
+          wget -q -O assets/vendor19/realistic/school_desk.glb "$LIMINAL/school_desk/school_desk.glb"
+          wget -q -O assets/vendor19/realistic/lockers.glb "$LIMINAL/lockers/lockers.glb"
+          wget -q -O assets/vendor19/realistic/cleaning_cart.glb "$LIMINAL/cleaning_cart/cleaning_cart.glb"
+          wget -q -O assets/vendor19/realistic/garbage_bin.glb "$LIMINAL/garbage_bin/garbage_bin.glb"
+          wget -q -O assets/vendor19/realistic/city_bench.glb "$LIMINAL/city_bench/city_bench.glb"
+          test "$(find assets/vendor19 -type f -name '*.glb' -size +100c | wc -l)" -eq 15
 
       - name: Download Godot 4.6.3 and export templates
         run: |

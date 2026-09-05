@@ -1,9 +1,11 @@
 extends CharacterBody3D
 
-@export var walk_speed: float = 3.2
-@export var run_speed: float = 5.4
-@export var acceleration: float = 10.5
-@export var turn_speed: float = 10.0
+@export var walk_speed: float = 3.35
+@export var run_speed: float = 5.65
+@export var acceleration: float = 28.0
+@export var braking: float = 34.0
+@export var direction_change_accel: float = 65.0
+@export var turn_speed: float = 11.0
 
 var _visual: Node3D = Node3D.new()
 var _left_arm: Node3D = Node3D.new()
@@ -11,7 +13,6 @@ var _right_arm: Node3D = Node3D.new()
 var _left_leg: Node3D = Node3D.new()
 var _right_leg: Node3D = Node3D.new()
 var _phase: float = 0.0
-var _smoothed_dir: Vector3 = Vector3.ZERO
 
 func _ready() -> void:
 	name = "Player"
@@ -25,108 +26,105 @@ func _ready() -> void:
 	add_child(collision)
 
 func _physics_process(delta: float) -> void:
-	var input_vec: Vector2 = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	var target_dir: Vector3 = _screen_space_move_direction(input_vec)
-
-	# Smooth requested direction just enough to avoid twitch when rapidly changing
-	# keys, while keeping the movement axes locked to the current SCREEN.
-	var response: float = 1.0 - exp(-15.0 * delta)
-	_smoothed_dir = _smoothed_dir.lerp(target_dir,response)
-	if target_dir == Vector3.ZERO and _smoothed_dir.length() < 0.020:
-		_smoothed_dir = Vector3.ZERO
-	elif _smoothed_dir.length() > 1.0:
-		_smoothed_dir = _smoothed_dir.normalized()
+	# Read the four keys explicitly. There is no cached/smoothed input direction:
+	# W/A/S/D changes direction immediately, while only the body turn is softened.
+	var side_amount: float = Input.get_action_strength("move_right") - Input.get_action_strength("move_left")
+	var forward_amount: float = Input.get_action_strength("move_forward") - Input.get_action_strength("move_back")
+	var target_dir: Vector3 = Vector3.ZERO
+	var active_camera: Camera3D = get_viewport().get_camera_3d()
+	if absf(side_amount) > 0.001 or absf(forward_amount) > 0.001:
+		var screen_up: Vector3
+		var screen_right: Vector3
+		if active_camera != null:
+			var basis_pair: Array[Vector3] = _screen_ground_basis(active_camera)
+			screen_up = basis_pair[0]
+			screen_right = basis_pair[1]
+		else:
+			screen_up = Vector3(0.0,0.0,-1.0)
+			screen_right = Vector3(1.0,0.0,0.0)
+		target_dir = screen_right * side_amount + screen_up * forward_amount
+		if target_dir.length() > 1.0:
+			target_dir = target_dir.normalized()
 
 	var target_speed: float = run_speed if Input.is_action_pressed("sprint") else walk_speed
-	var desired_velocity: Vector3 = _smoothed_dir * target_speed
-	velocity.x = move_toward(velocity.x, desired_velocity.x, acceleration * delta)
-	velocity.z = move_toward(velocity.z, desired_velocity.z, acceleration * delta)
+	var desired: Vector3 = target_dir * target_speed
+	var current_flat: Vector3 = Vector3(velocity.x,0.0,velocity.z)
+	var accel_now: float = braking if target_dir == Vector3.ZERO else acceleration
+	if target_dir != Vector3.ZERO and current_flat.length() > 0.18:
+		var alignment: float = current_flat.normalized().dot(target_dir.normalized())
+		if alignment < 0.72:
+			accel_now = direction_change_accel
+	velocity.x = move_toward(velocity.x,desired.x,accel_now*delta)
+	velocity.z = move_toward(velocity.z,desired.z,accel_now*delta)
 
+	# Facing follows actual travel, not the keyboard. This preserves smooth animation
+	# without making the controls themselves lag behind the player.
 	var travel: Vector3 = Vector3(velocity.x,0.0,velocity.z)
 	if travel.length() > 0.20:
 		var target_yaw: float = atan2(travel.x,travel.z)
 		rotation.y = lerp_angle(rotation.y,target_yaw,1.0-exp(-turn_speed*delta))
 
 	if not is_on_floor():
-		velocity.y -= 18.0 * delta
+		velocity.y -= 18.0*delta
 	move_and_slide()
 	_animate(delta)
 
-# Exact screen-space movement. Instead of assuming a sign/convention from the
-# Camera3D basis, two points are projected from the screen onto the player's
-# ground plane. Therefore W is always visually UP, S DOWN, A LEFT and D RIGHT,
-# even while the orbit camera is rotating or easing into its new position.
-func _screen_space_move_direction(input_vec: Vector2) -> Vector3:
-	if input_vec.length() <= 0.01:
-		return Vector3.ZERO
-	var cam: Camera3D = get_viewport().get_camera_3d()
-	if cam == null:
-		var fallback := Vector3(input_vec.x,0.0,input_vec.y)
-		return fallback.normalized() if fallback.length() > 0.01 else Vector3.ZERO
-
-	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var center: Vector2 = viewport_size * 0.5
-	var ground_y: float = global_position.y
-	var center_world: Vector3 = _screen_to_ground(cam,center,ground_y)
-	var up_world: Vector3 = _screen_to_ground(cam,center+Vector2(0.0,-120.0),ground_y)
-	var right_world: Vector3 = _screen_to_ground(cam,center+Vector2(120.0,0.0),ground_y)
-
-	var screen_up: Vector3 = up_world-center_world
-	var screen_right: Vector3 = right_world-center_world
+func _screen_ground_basis(cam: Camera3D) -> Array[Vector3]:
+	# Convert actual pixels around the player into points on the ground plane.
+	# This makes W literally point toward the top of the current rendered image,
+	# independent of camera yaw, perspective or orbit interpolation.
+	var anchor: Vector2 = cam.unproject_position(global_position+Vector3(0.0,0.08,0.0))
+	var center: Vector3 = _screen_to_ground(cam,anchor,global_position.y)
+	var top: Vector3 = _screen_to_ground(cam,anchor+Vector2(0.0,-120.0),global_position.y)
+	var right_point: Vector3 = _screen_to_ground(cam,anchor+Vector2(120.0,0.0),global_position.y)
+	var screen_up: Vector3 = top-center
+	var screen_right: Vector3 = right_point-center
 	screen_up.y = 0.0
 	screen_right.y = 0.0
-	if screen_up.length() < 0.001 or screen_right.length() < 0.001:
-		# Very defensive fallback; normal game pitch never reaches this branch.
+	if screen_up.length() < 0.01 or screen_right.length() < 0.01:
 		var cam_forward: Vector3 = -cam.global_transform.basis.z
 		cam_forward.y = 0.0
 		cam_forward = cam_forward.normalized()
 		var cam_right: Vector3 = cam.global_transform.basis.x
 		cam_right.y = 0.0
 		cam_right = cam_right.normalized()
-		screen_up = cam_forward
-		screen_right = cam_right
-	else:
-		screen_up = screen_up.normalized()
-		screen_right = screen_right.normalized()
+		return [cam_forward,cam_right]
+	return [screen_up.normalized(),screen_right.normalized()]
 
-	# Input.get_vector gives W as y=-1, hence -input_vec.y for screen-up.
-	var dir: Vector3 = screen_right*input_vec.x + screen_up*(-input_vec.y)
-	return dir.normalized() if dir.length() > 0.01 else Vector3.ZERO
-
-func _screen_to_ground(cam: Camera3D, screen_pos: Vector2, ground_y: float) -> Vector3:
-	var origin: Vector3 = cam.project_ray_origin(screen_pos)
-	var ray: Vector3 = cam.project_ray_normal(screen_pos)
+func _screen_to_ground(cam: Camera3D,screen_point: Vector2,ground_y: float) -> Vector3:
+	var origin: Vector3 = cam.project_ray_origin(screen_point)
+	var ray: Vector3 = cam.project_ray_normal(screen_point)
 	if absf(ray.y) < 0.0001:
-		return origin + ray*10.0
+		return global_position
 	var t: float = (ground_y-origin.y)/ray.y
-	return origin + ray*t
+	return origin+ray*t
 
 func _animate(delta: float) -> void:
-	var speed: float = Vector2(velocity.x, velocity.z).length()
+	var speed: float = Vector2(velocity.x,velocity.z).length()
 	var moving: bool = speed > 0.15
-	_phase += delta * (8.0 if speed < 4.0 else 11.0)
-	var swing: float = sin(_phase) * clampf(speed / walk_speed, 0.0, 1.0)
+	_phase += delta*(8.0 if speed < 4.0 else 11.0)
+	var swing: float = sin(_phase)*clampf(speed/walk_speed,0.0,1.0)
 	var amp: float = 0.62 if speed < 4.0 else 0.9
 	if moving:
-		_left_arm.rotation.x = lerp(_left_arm.rotation.x, swing * amp, 0.22)
-		_right_arm.rotation.x = lerp(_right_arm.rotation.x, -swing * amp, 0.22)
-		_left_leg.rotation.x = lerp(_left_leg.rotation.x, -swing * amp, 0.22)
-		_right_leg.rotation.x = lerp(_right_leg.rotation.x, swing * amp, 0.22)
-		_visual.position.y = abs(sin(_phase)) * 0.035
+		_left_arm.rotation.x = lerp(_left_arm.rotation.x,swing*amp,0.22)
+		_right_arm.rotation.x = lerp(_right_arm.rotation.x,-swing*amp,0.22)
+		_left_leg.rotation.x = lerp(_left_leg.rotation.x,-swing*amp,0.22)
+		_right_leg.rotation.x = lerp(_right_leg.rotation.x,swing*amp,0.22)
+		_visual.position.y = abs(sin(_phase))*0.035
 	else:
-		_left_arm.rotation.x = lerp(_left_arm.rotation.x, 0.05 + sin(_phase * 0.25) * 0.02, 0.08)
-		_right_arm.rotation.x = lerp(_right_arm.rotation.x, -0.05 - sin(_phase * 0.25) * 0.02, 0.08)
-		_left_leg.rotation.x = lerp(_left_leg.rotation.x, 0.0, 0.1)
-		_right_leg.rotation.x = lerp(_right_leg.rotation.x, 0.0, 0.1)
-		_visual.position.y = sin(_phase * 0.35) * 0.006
+		_left_arm.rotation.x = lerp(_left_arm.rotation.x,0.05+sin(_phase*0.25)*0.02,0.08)
+		_right_arm.rotation.x = lerp(_right_arm.rotation.x,-0.05-sin(_phase*0.25)*0.02,0.08)
+		_left_leg.rotation.x = lerp(_left_leg.rotation.x,0.0,0.1)
+		_right_leg.rotation.x = lerp(_right_leg.rotation.x,0.0,0.1)
+		_visual.position.y = sin(_phase*0.35)*0.006
 
-func _mat(color: Color, rough: float = 0.82) -> StandardMaterial3D:
+func _mat(color: Color,rough: float = 0.82) -> StandardMaterial3D:
 	var m: StandardMaterial3D = StandardMaterial3D.new()
 	m.albedo_color = color
 	m.roughness = rough
 	return m
 
-func _mesh_box(size: Vector3, color: Color, parent: Node3D, pos: Vector3 = Vector3.ZERO) -> MeshInstance3D:
+func _mesh_box(size: Vector3,color: Color,parent: Node3D,pos: Vector3 = Vector3.ZERO) -> MeshInstance3D:
 	var n: MeshInstance3D = MeshInstance3D.new()
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = size
@@ -137,7 +135,7 @@ func _mesh_box(size: Vector3, color: Color, parent: Node3D, pos: Vector3 = Vecto
 	parent.add_child(n)
 	return n
 
-func _mesh_capsule(radius: float, height: float, color: Color, parent: Node3D, pos: Vector3 = Vector3.ZERO) -> MeshInstance3D:
+func _mesh_capsule(radius: float,height: float,color: Color,parent: Node3D,pos: Vector3 = Vector3.ZERO) -> MeshInstance3D:
 	var n: MeshInstance3D = MeshInstance3D.new()
 	var mesh: CapsuleMesh = CapsuleMesh.new()
 	mesh.radius = radius
@@ -149,14 +147,14 @@ func _mesh_capsule(radius: float, height: float, color: Color, parent: Node3D, p
 	parent.add_child(n)
 	return n
 
-func _limb(parent: Node3D, x: float, y: float, color: Color, length: float, boot: bool = false) -> Node3D:
+func _limb(parent: Node3D,x: float,y: float,color: Color,length: float,boot: bool = false) -> Node3D:
 	var pivot: Node3D = Node3D.new()
-	pivot.position = Vector3(x, y, 0.0)
+	pivot.position = Vector3(x,y,0.0)
 	parent.add_child(pivot)
 	var radius: float = 0.105 if boot else 0.09
-	_mesh_capsule(radius, length, color, pivot, Vector3(0.0, -length * 0.5, 0.0))
+	_mesh_capsule(radius,length,color,pivot,Vector3(0.0,-length*0.5,0.0))
 	if boot:
-		_mesh_box(Vector3(0.2, 0.13, 0.34), Color("23272b"), pivot, Vector3(0.0, -length + 0.02, 0.08))
+		_mesh_box(Vector3(0.2,0.13,0.34),Color("23272b"),pivot,Vector3(0.0,-length+0.02,0.08))
 	return pivot
 
 func _build_visual() -> void:
@@ -165,12 +163,12 @@ func _build_visual() -> void:
 	var pants: Color = Color("344751")
 	var skin: Color = Color("d6aa89")
 	var dark: Color = Color("263139")
-	_mesh_box(Vector3(0.62, 0.86, 0.38), coat, _visual, Vector3(0.0, 1.25, 0.0))
-	_mesh_box(Vector3(0.45, 0.56, 0.18), Color("506557"), _visual, Vector3(0.0, 1.25, -0.28))
-	_mesh_capsule(0.23, 0.46, skin, _visual, Vector3(0.0, 1.93, 0.0))
-	var hat: MeshInstance3D = _mesh_capsule(0.235, 0.17, dark, _visual, Vector3(0.0, 2.12, 0.0))
+	_mesh_box(Vector3(0.62,0.86,0.38),coat,_visual,Vector3(0.0,1.25,0.0))
+	_mesh_box(Vector3(0.45,0.56,0.18),Color("506557"),_visual,Vector3(0.0,1.25,-0.28))
+	_mesh_capsule(0.23,0.46,skin,_visual,Vector3(0.0,1.93,0.0))
+	var hat: MeshInstance3D = _mesh_capsule(0.235,0.17,dark,_visual,Vector3(0.0,2.12,0.0))
 	hat.scale.y = 0.65
-	_left_arm = _limb(_visual, -0.4, 1.58, coat, 0.7)
-	_right_arm = _limb(_visual, 0.4, 1.58, coat, 0.7)
-	_left_leg = _limb(_visual, -0.17, 0.9, pants, 0.78, true)
-	_right_leg = _limb(_visual, 0.17, 0.9, pants, 0.78, true)
+	_left_arm = _limb(_visual,-0.4,1.58,coat,0.7)
+	_right_arm = _limb(_visual,0.4,1.58,coat,0.7)
+	_left_leg = _limb(_visual,-0.17,0.9,pants,0.78,true)
+	_right_leg = _limb(_visual,0.17,0.9,pants,0.78,true)

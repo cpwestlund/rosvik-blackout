@@ -52,7 +52,13 @@ namespace Rosvik.Blackout.EditorTools {
         }
 
         static Material Mat(string name, Color c, float smooth=.25f, bool emission=false) {
-            var shader = Shader.Find("Universal Render Pipeline/Lit");\n            if (!shader || !shader.isSupported) shader = Shader.Find("Standard");\n            if (!shader || !shader.isSupported) shader = Shader.Find("Sprites/Default");
+            Shader shader;
+            // Pick the shader that matches the pipeline actually active in this project.
+            if (GraphicsSettings.defaultRenderPipeline != null)
+                shader = Shader.Find("Universal Render Pipeline/Lit");
+            else
+                shader = Shader.Find("Standard");
+            if (!shader || !shader.isSupported) shader = Shader.Find("Sprites/Default");
             var m = new Material(shader) { name = name, color = c };
             if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness",smooth);
             if (emission) {
@@ -186,7 +192,7 @@ namespace Rosvik.Blackout.EditorTools {
             EditorSceneManager.SaveScene(scene,ScenePath);
             EditorBuildSettings.scenes=new[]{new EditorBuildSettingsScene(ScenePath,true)};
             Selection.activeGameObject=player;
-            Debug.Log("ROSVIK UNITY HERO SLICE BUILT: "+ScenePath);
+            EditorPrefs.SetInt(BuildVersionKey, BuildVersion);\n            Debug.Log("ROSVIK UNITY HERO SLICE BUILT: "+ScenePath);
         }
     }
 }

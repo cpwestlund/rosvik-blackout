@@ -12,6 +12,7 @@ func _ready() -> void:
 	_detail_root20 = Node3D.new()
 	_detail_root20.name = "RosvikVerticalSlice20"
 	add_child(_detail_root20)
+	_remove_roof_scallops20()
 	_fix_school_entrance20()
 	_add_schoolyard_life20()
 	_add_road_detail20()
@@ -43,6 +44,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		_camera_yaw += mm.relative.x*0.0054
 		_camera_pitch = clampf(_camera_pitch-mm.relative.y*0.0038,0.44,0.74)
 		get_viewport().set_input_as_handled()
+
+func _remove_roof_scallops20() -> void:
+	if _art_root19b == null:
+		return
+	for child: Node in _art_root19b.get_children():
+		if child is MeshInstance3D:
+			var m := child as MeshInstance3D
+			if m.mesh is SphereMesh and m.position.y > 4.2 and m.position.z > 5.8:
+				m.visible = false
 
 func _fix_school_entrance20() -> void:
 	if _school_root == null:
@@ -147,24 +157,56 @@ func _add_winter_microdetail20() -> void:
 	_add_footpath20(root,Vector3(-5.0,0.0,7.3),Vector3(-5.4,0.0,14.2),17)
 	_add_footpath20(root,Vector3(-4.0,0.0,9.0),Vector3(7.5,0.0,11.2),22)
 
+func _build_rosvalla19() -> void:
+	var root := Node3D.new()
+	root.name = "Rosvalla19"
+	add_child(root)
+	var center := Vector3(9.0,0.0,53.0)
+	_box(Vector3(64.0,0.032,38.0),field_mat,center+Vector3(0,0.016,0),root)
+
+	# One real field under patchy windblown snow. No giant rectangular overlays.
+	for spec: Dictionary in [
+		{"p":Vector3(-22,0,-13),"s":Vector3(4.5,0.075,1.25),"r":0.12},
+		{"p":Vector3(12,0,-14),"s":Vector3(3.8,0.065,1.05),"r":-0.08},
+		{"p":Vector3(23,0,-6),"s":Vector3(3.3,0.060,1.10),"r":0.18},
+		{"p":Vector3(-13,0,-3),"s":Vector3(4.8,0.065,1.00),"r":-0.14},
+		{"p":Vector3(18,0,4),"s":Vector3(4.0,0.060,1.25),"r":0.10},
+		{"p":Vector3(-24,0,9),"s":Vector3(3.7,0.065,1.10),"r":0.20},
+		{"p":Vector3(1,0,14),"s":Vector3(5.0,0.070,1.10),"r":-0.10},
+		{"p":Vector3(25,0,15),"s":Vector3(3.1,0.060,0.95),"r":0.16}
+	]:
+		_snow_mound20(root,center+spec["p"],spec["s"],float(spec["r"]))
+
+	var line := _mat(Color("c5c9c2"),0.98)
+	# Broken touchlines/sidelines peeking through snow.
+	for x: float in [-24.0,-12.0,0.0,12.0,24.0]:
+		_box(Vector3(7.1,0.012,0.070),line,center+Vector3(x,0.060,-17.55),root)
+		_box(Vector3(7.1,0.012,0.070),line,center+Vector3(x,0.060,17.55),root)
+	for z: float in [-13.0,-5.0,5.0,13.0]:
+		_box(Vector3(0.070,0.012,5.0),line,center+Vector3(-30.55,0.060,z),root)
+		_box(Vector3(0.070,0.012,5.0),line,center+Vector3(30.55,0.060,z),root)
+	for z: float in [-14.0,-7.0,0.0,7.0,14.0]:
+		_box(Vector3(0.070,0.012,3.5),line,center+Vector3(0,0.060,z),root)
+
+	_add_goal19(root,center+Vector3(-31.7,0,0),PI/2.0)
+	_add_goal19(root,center+Vector3(31.7,0,0),-PI/2.0)
+	_add_fence19(root,center+Vector3(-32.8,0,-20.0),center+Vector3(32.8,0,-20.0))
+	_add_fence19(root,center+Vector3(-32.8,0,20.0),center+Vector3(18.0,0,20.0))
+	_add_fence19(root,center+Vector3(24.0,0,20.0),center+Vector3(32.8,0,20.0))
+	for p: Vector3 in [center+Vector3(-27,0,-20.8),center+Vector3(27,0,-20.8),center+Vector3(-27,0,20.8),center+Vector3(27,0,20.8)]:
+		_add_field_light19(root,p)
+	# Both dugouts are on the north touchline and open toward the pitch.
+	_add_dugout19b(root,center+Vector3(-8,0,-21.2),PI)
+	_add_dugout19b(root,center+Vector3(8,0,-21.2),PI)
+	for p: Vector3 in [center+Vector3(-29,0,-17),center+Vector3(28,0,16),center+Vector3(-30,0,15),center+Vector3(21,0,-18)]:
+		_snow_mound20(root,p,Vector3(2.8,0.20,0.72),0.0)
+	_world_prop_count += 94
+
 func _add_rosvalla_detail20() -> void:
 	var field := get_node_or_null("Rosvalla19") as Node3D
 	if field == null:
 		return
-	# Correct the two dugouts: they sit on the north touchline and open south,
-	# towards the pitch. 19B had them facing away from play.
-	var old_dugouts: Array[Node3D] = []
-	for child: Node in field.get_children():
-		if child is Node3D and child.get_child_count() > 3:
-			var p := (child as Node3D).position
-			if absf(p.z-(53.0-21.2)) < 0.8 and absf(p.x-9.0) < 14.0:
-				old_dugouts.append(child as Node3D)
-	for d: Node3D in old_dugouts:
-		d.visible = false
 	var center := Vector3(9.0,0.0,53.0)
-	_add_dugout19b(field,center+Vector3(-8,0,-21.2),PI)
-	_add_dugout19b(field,center+Vector3(8,0,-21.2),PI)
-	# Human scale around the football ground.
 	_add_bin20(field,center+Vector3(-18,0,-21.0),Color("3d4b46"))
 	_add_bin20(field,center+Vector3(18,0,-21.0),Color("3d4b46"))
 	_add_ball20(field,center+Vector3(6.0,0.19,5.0),Color("d6d0ba"))

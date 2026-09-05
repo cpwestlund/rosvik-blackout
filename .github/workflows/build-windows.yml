@@ -86,7 +86,11 @@ jobs:
             ROSVIK_HERO_SCHOOL_21_READY \
             ROSVIK_COZY_BLACKOUT_21_READY \
             ROSVIK_INTERIOR_DIORAMA_21_READY \
-            ROSVIK_WORLD_COHESION_21_READY; do
+            ROSVIK_WORLD_COHESION_21_READY \
+            ROSVIK_VISUAL_TARGET_22_READY \
+            ROSVIK_AUTHORED_ASSET_PIPELINE_22_READY \
+            ROSVIK_HERO_CLASSROOM_22_READY \
+            ROSVIK_HERO_YARD_22_READY; do
               grep -q "$marker" runtime.log || { echo "Missing runtime marker: $marker"; cat runtime.log; exit 1; }
           done
 
@@ -107,13 +111,13 @@ jobs:
           [ "$godot_status" -eq 0 ] || exit "$godot_status"
           grep -q ROSVIK_VISUAL_CAPTURE_19_READY capture.log
           test -s build/captures/01_school_exterior.png
-          test -s build/captures/02_school_sport_rosvalla.png
-          test -s build/captures/03_school_interior.png
+          test -s build/captures/02_school_interior.png
+          test -s build/captures/03_school_context.png
 
       - name: Upload visual captures
         uses: actions/upload-artifact@v4
         with:
-          name: ROSVIK_BLACKOUT_HeroCaptures21
+          name: ROSVIK_BLACKOUT_HeroCaptures22
           path: build/captures/*.png
           if-no-files-found: error
           retention-days: 30
@@ -126,7 +130,7 @@ jobs:
       - name: Upload playable build
         uses: actions/upload-artifact@v4
         with:
-          name: ROSVIK_BLACKOUT_Windows_21
+          name: ROSVIK_BLACKOUT_Windows_22
           path: build/ROSVIK_BLACKOUT.exe
           if-no-files-found: error
           retention-days: 30

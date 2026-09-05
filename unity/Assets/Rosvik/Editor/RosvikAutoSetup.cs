@@ -15,6 +15,8 @@ namespace Rosvik.Blackout.EditorTools {
         const string Root = "Assets/Rosvik/External/KenneyFurniture";
         const string ScenePath = "Assets/Rosvik/Scenes/RosvikHero.unity";
         const string Base = "https://raw.githubusercontent.com/ETdoFresh/kenney.nl/master/furniturekit_updated/Models/FBX%20format/";
+        const int BuildVersion = 5;
+        const string BuildVersionKey = "ROSVIK_UNITY_BOOTSTRAP_VERSION";
 
         static readonly string[] Assets = {
             "bench.fbx","bookcaseOpen.fbx","bookcaseOpenLow.fbx","books.fbx",
@@ -31,7 +33,9 @@ namespace Rosvik.Blackout.EditorTools {
 
         [MenuItem("Rosvik/Rebuild Hero Slice")]
         public static void Ensure() {
+            if (EditorApplication.isPlayingOrWillChangePlaymode) return;
             try {
+                if (EditorPrefs.GetInt(BuildVersionKey, 0) >= BuildVersion && File.Exists(ScenePath)) return;
                 Directory.CreateDirectory(Root);
                 Directory.CreateDirectory("Assets/Rosvik/Scenes");
                 bool downloaded = false;
@@ -53,7 +57,6 @@ namespace Rosvik.Blackout.EditorTools {
 
         static Material Mat(string name, Color c, float smooth=.25f, bool emission=false) {
             Shader shader;
-            // Pick the shader that matches the pipeline actually active in this project.
             if (GraphicsSettings.defaultRenderPipeline != null)
                 shader = Shader.Find("Universal Render Pipeline/Lit");
             else
@@ -99,23 +102,19 @@ namespace Rosvik.Blackout.EditorTools {
             var warm=Mat("Warm window",new Color(1f,.52f,.20f),.35f,true);
             var red=Mat("Muted red",new Color(.42f,.15f,.12f),.2f);
 
-            // Ground and the one street we actually need.
             Cube("Snow ground",root,Vector3.zero,new Vector3(58,.25f,44),snow);
             Cube("School road",root,new Vector3(0,.15f,14),new Vector3(46,.08f,6.2f),asphalt);
             Cube("Ploughed walk",root,new Vector3(0,.20f,7.2f),new Vector3(38,.06f,5.4f),Mat("Packed snow",new Color(.59f,.65f,.66f),.12f));
 
-            // SCHOOL: one clean authoritative shell. No duplicate generators.
             var school=new GameObject("Rosviks skola").transform; school.SetParent(root); school.localPosition=new Vector3(0,.25f,0);
             Cube("Back wall",school,new Vector3(0,1.8f,-5.2f),new Vector3(34,3.4f,.25f),wood);
             Cube("Left gable",school,new Vector3(-17,1.8f,0),new Vector3(.25f,3.4f,10.4f),wood);
             Cube("Right gable",school,new Vector3(17,1.8f,0),new Vector3(.25f,3.4f,10.4f),wood);
-            // Front wall is split around a generous real doorway.
             var frontL=Cube("Front L",school,new Vector3(-11.2f,1.8f,5.2f),new Vector3(11.6f,3.4f,.25f),wood);
             var frontR=Cube("Front R",school,new Vector3(7.1f,1.8f,5.2f),new Vector3(19.8f,3.4f,.25f),wood);
             var roof=Cube("Roof",school,new Vector3(0,3.72f,0),new Vector3(34.6f,.28f,10.9f),dark,false);
             Cube("Floor",school,new Vector3(0,.08f,0),new Vector3(33.7f,.12f,10),floor);
 
-            // Window rhythm + warm pockets.
             for(int i=0;i<8;i++) {
                 float x=-14.6f+i*4.15f;
                 if(x>-7 && x<-3) continue;
@@ -124,7 +123,6 @@ namespace Rosvik.Blackout.EditorTools {
                 Cube("Warm glass",school,new Vector3(x,1.62f,5.10f),new Vector3(1.48f,1.18f,.05f), i==4||i==5?warm:dark,false);
             }
 
-            // Entrance canopy + two open leaves. The physical opening is unobstructed.
             var entrance=new GameObject("ENTRANCE - WALKABLE").transform; entrance.SetParent(school);
             Cube("Canopy",entrance,new Vector3(-5,3.12f,6.45f),new Vector3(5.8f,.24f,2.5f),dark);
             Cube("Snow canopy",entrance,new Vector3(-5,3.30f,6.45f),new Vector3(5.6f,.12f,2.3f),snow,false);
@@ -135,7 +133,6 @@ namespace Rosvik.Blackout.EditorTools {
             entryLight.transform.SetParent(entrance); entryLight.transform.localPosition=new Vector3(-5,2.55f,6.25f);
             entryLight.type=LightType.Point; entryLight.color=new Color(1f,.55f,.27f); entryLight.intensity=950f; entryLight.range=7f; entryLight.shadows=LightShadows.Soft;
 
-            // Connected corridor and one classroom. No fake teleports.
             Cube("Corridor divider",school,new Vector3(2.5f,.7f,2.4f),new Vector3(23f,1.1f,.18f),interior);
             Cube("Classroom divider",school,new Vector3(2.0f,.7f,-1.6f),new Vector3(.18f,1.1f,7.0f),interior);
             for(int r=0;r<2;r++) for(int col=0;col<4;col++) {
@@ -150,13 +147,11 @@ namespace Rosvik.Blackout.EditorTools {
             Prefab("pottedPlant.fbx",school,new Vector3(15.4f,.22f,-.5f),Vector3.one*.9f,0);
             Prefab("trashcan.fbx",school,new Vector3(3.2f,.22f,-4.6f),Vector3.one*.9f,0);
 
-            // Hall clutter/coat zone.
-            for(int i=0;i<4;i++) Prefab("bookcaseClosed.fbx",school,new Vector3(-14.6f+i*2.1f,.22f,3.65f),Vector3.one*.92f,180);
+            for(int i=0;i<4;i++) Prefab("bookcaseOpenLow.fbx",school,new Vector3(-14.6f+i*2.1f,.22f,3.65f),Vector3.one*.92f,180);
             Prefab("bench.fbx",school,new Vector3(-10.2f,.22f,2.9f),Vector3.one*.95f,90);
             Prefab("rugDoormat.fbx",school,new Vector3(-5,.23f,4.5f),Vector3.one*1.35f,0);
             Prefab("trashcan.fbx",school,new Vector3(-7.6f,.22f,3.75f),Vector3.one*.9f,0);
 
-            // Schoolyard authored scenes, not random scatter.
             var yard=new GameObject("Schoolyard dressing").transform; yard.SetParent(root);
             Prefab("bench.fbx",yard,new Vector3(-11,.25f,8.2f),Vector3.one,90);
             Prefab("bench.fbx",yard,new Vector3(8.5f,.25f,8.2f),Vector3.one,90);
@@ -168,7 +163,6 @@ namespace Rosvik.Blackout.EditorTools {
                 drift.transform.localScale=new Vector3(3.8f,.32f,.95f); drift.GetComponent<Renderer>().sharedMaterial=snow; UnityEngine.Object.DestroyImmediate(drift.GetComponent<Collider>());
             }
 
-            // Player capsule placeholder, deliberately clean and temporary.
             var player=GameObject.CreatePrimitive(PrimitiveType.Capsule); player.name="PLAYER_PLACEHOLDER";
             player.transform.SetParent(root); player.transform.localPosition=new Vector3(-5,1.1f,11.0f);
             UnityEngine.Object.DestroyImmediate(player.GetComponent<CapsuleCollider>());
@@ -177,18 +171,15 @@ namespace Rosvik.Blackout.EditorTools {
             var cutaway=school.gameObject.AddComponent<SchoolCutaway>(); cutaway.player=player.transform; cutaway.roof=roof.GetComponent<Renderer>(); cutaway.frontWallRenderers=new[]{frontL.GetComponent<Renderer>(),frontR.GetComponent<Renderer>()};
             player.GetComponent<Renderer>().sharedMaterial=red;
 
-            // Camera.
             var cameraGo=new GameObject("Isometric Camera");
             var cam=cameraGo.AddComponent<Camera>(); cam.orthographic=true; cam.orthographicSize=11.5f; cam.nearClipPlane=.1f; cam.farClipPlane=150f;
             var rig=cameraGo.AddComponent<IsometricCameraRig>(); rig.target=player.transform; rig.yaw=45f; rig.pitch=48f; rig.distance=18f;
             Camera.SetupCurrent(cam);
 
-            // Sun/fill.
             var sun=new GameObject("Cold winter sun").AddComponent<Light>(); sun.type=LightType.Directional; sun.color=new Color(.68f,.80f,.90f); sun.intensity=1.15f;
             sun.transform.rotation=Quaternion.Euler(43,-38,0); sun.shadows=LightShadows.Soft;
             RenderSettings.ambientMode=AmbientMode.Flat; RenderSettings.ambientLight=new Color(.20f,.27f,.30f);
 
-            // Save.
             EditorSceneManager.SaveScene(scene,ScenePath);
             EditorBuildSettings.scenes=new[]{new EditorBuildSettingsScene(ScenePath,true)};
             Selection.activeGameObject=player;

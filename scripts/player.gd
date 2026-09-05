@@ -2,9 +2,9 @@ extends CharacterBody3D
 
 @export var walk_speed: float = 3.35
 @export var run_speed: float = 5.65
-@export var acceleration: float = 28.0
-@export var braking: float = 34.0
-@export var direction_change_accel: float = 65.0
+@export var acceleration: float = 38.0
+@export var braking: float = 48.0
+@export var direction_change_accel: float = 78.0
 @export var turn_speed: float = 11.0
 
 var _visual: Node3D = Node3D.new()
@@ -26,25 +26,13 @@ func _ready() -> void:
 	add_child(collision)
 
 func _physics_process(delta: float) -> void:
-	# Read the four keys explicitly. There is no cached/smoothed input direction:
-	# W/A/S/D changes direction immediately, while only the body turn is softened.
+	# WORLD-LOCKED CONTROLS. The camera is deliberately not read anywhere here.
+	# W is always world north (-Z), S south (+Z), A west (-X), D east (+X).
 	var side_amount: float = Input.get_action_strength("move_right") - Input.get_action_strength("move_left")
 	var forward_amount: float = Input.get_action_strength("move_forward") - Input.get_action_strength("move_back")
-	var target_dir: Vector3 = Vector3.ZERO
-	var active_camera: Camera3D = get_viewport().get_camera_3d()
-	if absf(side_amount) > 0.001 or absf(forward_amount) > 0.001:
-		var screen_up: Vector3
-		var screen_right: Vector3
-		if active_camera != null:
-			var basis_pair: Array[Vector3] = _screen_ground_basis(active_camera)
-			screen_up = basis_pair[0]
-			screen_right = basis_pair[1]
-		else:
-			screen_up = Vector3(0.0,0.0,-1.0)
-			screen_right = Vector3(1.0,0.0,0.0)
-		target_dir = screen_right * side_amount + screen_up * forward_amount
-		if target_dir.length() > 1.0:
-			target_dir = target_dir.normalized()
+	var target_dir: Vector3 = Vector3(side_amount, 0.0, -forward_amount)
+	if target_dir.length() > 1.0:
+		target_dir = target_dir.normalized()
 
 	var target_speed: float = run_speed if Input.is_action_pressed("sprint") else walk_speed
 	var desired: Vector3 = target_dir * target_speed
@@ -57,8 +45,7 @@ func _physics_process(delta: float) -> void:
 	velocity.x = move_toward(velocity.x,desired.x,accel_now*delta)
 	velocity.z = move_toward(velocity.z,desired.z,accel_now*delta)
 
-	# Facing follows actual travel, not the keyboard. This preserves smooth animation
-	# without making the controls themselves lag behind the player.
+	# The body may turn smoothly, but the requested movement direction never does.
 	var travel: Vector3 = Vector3(velocity.x,0.0,velocity.z)
 	if travel.length() > 0.20:
 		var target_yaw: float = atan2(travel.x,travel.z)
@@ -68,36 +55,6 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= 18.0*delta
 	move_and_slide()
 	_animate(delta)
-
-func _screen_ground_basis(cam: Camera3D) -> Array[Vector3]:
-	# Convert actual pixels around the player into points on the ground plane.
-	# This makes W literally point toward the top of the current rendered image,
-	# independent of camera yaw, perspective or orbit interpolation.
-	var anchor: Vector2 = cam.unproject_position(global_position+Vector3(0.0,0.08,0.0))
-	var center: Vector3 = _screen_to_ground(cam,anchor,global_position.y)
-	var top: Vector3 = _screen_to_ground(cam,anchor+Vector2(0.0,-120.0),global_position.y)
-	var right_point: Vector3 = _screen_to_ground(cam,anchor+Vector2(120.0,0.0),global_position.y)
-	var screen_up: Vector3 = top-center
-	var screen_right: Vector3 = right_point-center
-	screen_up.y = 0.0
-	screen_right.y = 0.0
-	if screen_up.length() < 0.01 or screen_right.length() < 0.01:
-		var cam_forward: Vector3 = -cam.global_transform.basis.z
-		cam_forward.y = 0.0
-		cam_forward = cam_forward.normalized()
-		var cam_right: Vector3 = cam.global_transform.basis.x
-		cam_right.y = 0.0
-		cam_right = cam_right.normalized()
-		return [cam_forward,cam_right]
-	return [screen_up.normalized(),screen_right.normalized()]
-
-func _screen_to_ground(cam: Camera3D,screen_point: Vector2,ground_y: float) -> Vector3:
-	var origin: Vector3 = cam.project_ray_origin(screen_point)
-	var ray: Vector3 = cam.project_ray_normal(screen_point)
-	if absf(ray.y) < 0.0001:
-		return global_position
-	var t: float = (ground_y-origin.y)/ray.y
-	return origin+ray*t
 
 func _animate(delta: float) -> void:
 	var speed: float = Vector2(velocity.x,velocity.z).length()

@@ -15,15 +15,19 @@ jobs:
 
       - name: Fetch CC0 art assets
         run: |
-          mkdir -p assets/vendor
+          mkdir -p assets/vendor/Textures assets/vendor/character/Textures
           wget -q -O assets/vendor/tree_pine.glb https://raw.githubusercontent.com/syuhei176/ai-game-assets/main/models/environment/tree_pine.glb
           wget -q -O assets/vendor/rock_large.glb https://raw.githubusercontent.com/syuhei176/ai-game-assets/main/models/environment/rock_large.glb
           wget -q -O assets/vendor/vehicle-truck-green.glb https://raw.githubusercontent.com/KenneyNL/Starter-Kit-Racing/main/models/vehicle-truck-green.glb
-          wget -q -O assets/vendor/kenney_character.glb https://raw.githubusercontent.com/KenneyNL/Starter-Kit-3D-Platformer/main/models/character.glb
+          wget -q -O assets/vendor/Textures/colormap.png https://raw.githubusercontent.com/KenneyNL/Starter-Kit-Racing/main/models/Textures/colormap.png
+          wget -q -O assets/vendor/character/kenney_character.glb https://raw.githubusercontent.com/KenneyNL/Starter-Kit-3D-Platformer/main/models/character.glb
+          wget -q -O assets/vendor/character/Textures/colormap.png https://raw.githubusercontent.com/KenneyNL/Starter-Kit-3D-Platformer/main/models/Textures/colormap.png
           test -s assets/vendor/tree_pine.glb
           test -s assets/vendor/rock_large.glb
           test -s assets/vendor/vehicle-truck-green.glb
-          test -s assets/vendor/kenney_character.glb
+          test -s assets/vendor/Textures/colormap.png
+          test -s assets/vendor/character/kenney_character.glb
+          test -s assets/vendor/character/Textures/colormap.png
 
       - name: Download Godot 4.6.3 and export templates
         run: |

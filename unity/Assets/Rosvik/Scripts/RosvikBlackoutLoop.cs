@@ -101,25 +101,25 @@ namespace Rosvik.Blackout {
             if (!player) return;
             EnsureStyles();
 
-            Rect panel = new Rect(18f, 18f, 290f, 128f);
+            Rect panel = new Rect(18f, 18f, 300f, 158f);
             Color old = GUI.color;
             GUI.color = new Color(.055f,.065f,.06f,.82f);
             GUI.Box(panel, GUIContent.none);
             GUI.color = old;
 
-            GUI.Label(new Rect(32f, 27f, 250f, 24f), restored ? "RESERVKRAFT ONLINE" : "STRÖMAVBROTT", titleStyle);
+            GUI.Label(new Rect(32f, 27f, 260f, 24f), restored ? "RESERVKRAFT ONLINE" : "STRÖMAVBROTT", titleStyle);
             if (restored) {
-                GUI.Label(new Rect(32f, 58f, 250f, 50f), "Skolområdet har nödström.\nNästa steg: säkra området.", doneStyle);
+                GUI.Label(new Rect(32f, 58f, 260f, 54f), "Skolområdet har nödström.\nNästa steg: säkra området.", doneStyle);
             } else {
                 int total = pickups != null ? pickups.Length : 0;
-                GUI.Label(new Rect(32f, 55f, 250f, 22f), "Hitta reservdelar  " + CollectedCount() + "/" + total, bodyStyle);
+                GUI.Label(new Rect(32f, 55f, 260f, 22f), "Hitta reservdelar  " + CollectedCount() + "/" + total, bodyStyle);
                 float y = 78f;
                 for (int i = 0; i < total && i < 3; i++) {
                     string mark = (collected != null && collected[i]) ? "✓ " : "• ";
-                    GUI.Label(new Rect(34f, y, 250f, 19f), mark + PickupName(i), collected != null && collected[i] ? doneStyle : bodyStyle);
+                    GUI.Label(new Rect(34f, y, 260f, 19f), mark + PickupName(i), collected != null && collected[i] ? doneStyle : bodyStyle);
                     y += 18f;
                 }
-                if (AllCollected()) GUI.Label(new Rect(32f, 112f, 255f, 22f), "Återvänd till reservkraften vid skolan.", doneStyle);
+                if (AllCollected()) GUI.Label(new Rect(32f, 136f, 265f, 22f), "Återvänd till reservkraften vid skolan.", doneStyle);
             }
 
             string prompt = InteractionPrompt();

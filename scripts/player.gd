@@ -2,8 +2,8 @@ extends CharacterBody3D
 
 @export var walk_speed: float = 3.2
 @export var run_speed: float = 5.4
-@export var acceleration: float = 9.0
-@export var turn_speed: float = 12.0
+@export var acceleration: float = 10.5
+@export var turn_speed: float = 10.0
 
 var _visual: Node3D = Node3D.new()
 var _left_arm: Node3D = Node3D.new()
@@ -11,6 +11,7 @@ var _right_arm: Node3D = Node3D.new()
 var _left_leg: Node3D = Node3D.new()
 var _right_leg: Node3D = Node3D.new()
 var _phase: float = 0.0
+var _smoothed_dir: Vector3 = Vector3.ZERO
 
 func _ready() -> void:
 	name = "Player"
@@ -25,17 +26,43 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	var input_vec: Vector2 = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	var dir: Vector3 = Vector3(input_vec.x, 0.0, input_vec.y)
+	var target_dir: Vector3 = Vector3.ZERO
+	var active_camera: Camera3D = get_viewport().get_camera_3d()
+	if input_vec.length() > 0.01:
+		if active_camera != null:
+			var cam_forward: Vector3 = -active_camera.global_transform.basis.z
+			cam_forward.y = 0.0
+			cam_forward = cam_forward.normalized()
+			var cam_right: Vector3 = active_camera.global_transform.basis.x
+			cam_right.y = 0.0
+			cam_right = cam_right.normalized()
+			target_dir = cam_right * input_vec.x + cam_forward * -input_vec.y
+		else:
+			target_dir = Vector3(input_vec.x,0.0,input_vec.y)
+		if target_dir.length() > 0.01:
+			target_dir = target_dir.normalized()
+
+	# Smooth the requested world direction so reversing or changing WASD axes does
+	# not flip facing back and forth for a few frames.
+	var response: float = 1.0 - exp(-13.0 * delta)
+	_smoothed_dir = _smoothed_dir.lerp(target_dir,response)
+	if target_dir == Vector3.ZERO and _smoothed_dir.length() < 0.025:
+		_smoothed_dir = Vector3.ZERO
+	elif _smoothed_dir.length() > 1.0:
+		_smoothed_dir = _smoothed_dir.normalized()
+
 	var target_speed: float = run_speed if Input.is_action_pressed("sprint") else walk_speed
-	if dir.length() > 0.01:
-		dir = dir.normalized()
-		velocity.x = move_toward(velocity.x, dir.x * target_speed, acceleration * delta)
-		velocity.z = move_toward(velocity.z, dir.z * target_speed, acceleration * delta)
-		var target_yaw: float = atan2(dir.x, dir.z)
-		rotation.y = lerp_angle(rotation.y, target_yaw, 1.0 - exp(-turn_speed * delta))
-	else:
-		velocity.x = move_toward(velocity.x, 0.0, acceleration * delta)
-		velocity.z = move_toward(velocity.z, 0.0, acceleration * delta)
+	var desired_velocity: Vector3 = _smoothed_dir * target_speed
+	velocity.x = move_toward(velocity.x, desired_velocity.x, acceleration * delta)
+	velocity.z = move_toward(velocity.z, desired_velocity.z, acceleration * delta)
+
+	# Face actual travel rather than raw input. This removes the visible twitch when
+	# the player is still decelerating from the previous direction.
+	var travel: Vector3 = Vector3(velocity.x,0.0,velocity.z)
+	if travel.length() > 0.20:
+		var target_yaw: float = atan2(travel.x,travel.z)
+		rotation.y = lerp_angle(rotation.y,target_yaw,1.0-exp(-turn_speed*delta))
+
 	if not is_on_floor():
 		velocity.y -= 18.0 * delta
 	move_and_slide()

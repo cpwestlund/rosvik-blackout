@@ -6,6 +6,72 @@ extends "res://scripts/main_visual_vertical_slice_20.gd"
 
 var _hero21 := Node3D.new()
 
+func _build_ground19() -> void:
+	_solid_box(Vector3(260.0,0.38,220.0),snow_mat,Vector3(12.0,-0.20,35.0),self)
+	# Ground snow is composed from low, broken drifts instead of giant capsules.
+	for spec: Dictionary in [
+		{"p":Vector3(-39,0,-6),"s":Vector3(3.0,0.22,0.70),"r":0.08},
+		{"p":Vector3(33,0,-8),"s":Vector3(2.6,0.20,0.60),"r":-0.10},
+		{"p":Vector3(87,0,11),"s":Vector3(3.2,0.24,0.72),"r":0.13},
+		{"p":Vector3(-47,0,48),"s":Vector3(2.8,0.20,0.62),"r":-0.06},
+		{"p":Vector3(71,0,59),"s":Vector3(3.0,0.22,0.66),"r":0.05},
+		{"p":Vector3(16,0,94),"s":Vector3(2.7,0.20,0.60),"r":-0.12}
+	]:
+		_snow_mound21(self,spec["p"],spec["s"],float(spec["r"]))
+
+func _build_rosvalla19() -> void:
+	var root := Node3D.new()
+	root.name = "Rosvalla19"
+	add_child(root)
+	var center := Vector3(9.0,0.0,53.0)
+	var turf := _textured_mat(Color("69766d"),0.985,"noise",128,0.014)
+	_box(Vector3(64.0,0.030,38.0),turf,center+Vector3(0,0.015,0),root)
+	var line := _mat(Color("d2d2c8"),0.96)
+	# Full-size readable football markings.
+	_box(Vector3(61.0,0.012,0.07),line,center+Vector3(0,0.052,-17.4),root)
+	_box(Vector3(61.0,0.012,0.07),line,center+Vector3(0,0.052,17.4),root)
+	_box(Vector3(0.07,0.012,34.8),line,center+Vector3(-30.5,0.052,0),root)
+	_box(Vector3(0.07,0.012,34.8),line,center+Vector3(30.5,0.052,0),root)
+	_box(Vector3(0.07,0.012,34.8),line,center+Vector3(0,0.052,0),root)
+	# Centre circle as short tangential dashes.
+	for i: int in range(28):
+		var a := float(i)/28.0*TAU
+		var p := center+Vector3(cos(a)*4.4,0.055,sin(a)*4.4)
+		var dash := _box(Vector3(0.90,0.012,0.065),line,p,root)
+		dash.rotation.y = -a
+	# Penalty areas and six-yard boxes.
+	for side: float in [-1.0,1.0]:
+		var xedge := 30.5*side
+		var inward := 5.6*side
+		_box(Vector3(0.07,0.012,20.0),line,center+Vector3(xedge-inward,0.052,0),root)
+		_box(Vector3(5.6,0.012,0.07),line,center+Vector3(xedge-inward*0.5,0.052,-10.0),root)
+		_box(Vector3(5.6,0.012,0.07),line,center+Vector3(xedge-inward*0.5,0.052,10.0),root)
+		_box(Vector3(0.07,0.012,9.0),line,center+Vector3(xedge-2.1*side,0.053,0),root)
+		_box(Vector3(2.1,0.012,0.07),line,center+Vector3(xedge-1.05*side,0.053,-4.5),root)
+		_box(Vector3(2.1,0.012,0.07),line,center+Vector3(xedge-1.05*side,0.053,4.5),root)
+	_add_goal19(root,center+Vector3(-31.7,0,0),PI/2.0)
+	_add_goal19(root,center+Vector3(31.7,0,0),-PI/2.0)
+	_add_fence19(root,center+Vector3(-32.8,0,-20.0),center+Vector3(32.8,0,-20.0))
+	_add_fence19(root,center+Vector3(-32.8,0,20.0),center+Vector3(18.0,0,20.0))
+	_add_fence19(root,center+Vector3(24.0,0,20.0),center+Vector3(32.8,0,20.0))
+	for p: Vector3 in [center+Vector3(-27,0,-20.8),center+Vector3(27,0,-20.8),center+Vector3(-27,0,20.8),center+Vector3(27,0,20.8)]:
+		_add_field_light19(root,p)
+	_add_dugout19b(root,center+Vector3(-8,0,-21.2),PI)
+	_add_dugout19b(root,center+Vector3(8,0,-21.2),PI)
+	# Windblown snow as thin, small streaks integrated with the turf.
+	for spec: Dictionary in [
+		{"p":Vector3(-21,0,-12),"s":Vector3(5.2,0.022,0.85),"r":0.11},
+		{"p":Vector3(10,0,-14),"s":Vector3(4.0,0.022,0.65),"r":-0.08},
+		{"p":Vector3(23,0,-7),"s":Vector3(3.8,0.022,0.72),"r":0.16},
+		{"p":Vector3(-12,0,-3),"s":Vector3(5.6,0.022,0.62),"r":-0.12},
+		{"p":Vector3(18,0,5),"s":Vector3(4.4,0.022,0.78),"r":0.09},
+		{"p":Vector3(-23,0,10),"s":Vector3(4.2,0.022,0.68),"r":0.18},
+		{"p":Vector3(0,0,14),"s":Vector3(5.0,0.022,0.64),"r":-0.10}
+	]:
+		var patch := _box(spec["s"],packed_snow_mat,center+spec["p"]+Vector3(0,0.060,0),root)
+		patch.rotation.y = float(spec["r"])
+	_world_prop_count += 90
+
 func _ready() -> void:
 	super._ready()
 	_hero21.name = "VisualTarget21"

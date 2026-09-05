@@ -13,7 +13,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch Hero 19 CC0 assets
+      - name: Fetch CC0 visual assets
         shell: bash
         run: |
           set -euo pipefail
@@ -29,7 +29,7 @@ jobs:
           wget -q -O assets/vendor19/furniture/monitor.glb "$BASE/furniture/monitor.glb"
           wget -q -O assets/vendor19/furniture/lamp.glb "$BASE/furniture/lamp.glb"
           wget -q -O assets/vendor19/buildings/cottage.glb "$BASE/buildings/cottage.glb"
-          find assets/vendor19 -type f -name '*.glb' -size +100c | wc -l | grep -q '^10
+          test "$(find assets/vendor19 -type f -name '*.glb' -size +100c | wc -l)" -eq 10
 
       - name: Download Godot 4.6.3 and export templates
         run: |
@@ -75,12 +75,12 @@ jobs:
             ROSVIK_USABLE_SCHOOL_ENTRANCE_20_READY \
             ROSVIK_ART_DENSITY_20_READY \
             ROSVIK_NATURAL_CAMERA_CONTROLS_20_READY \
+            ROSVIK_SCHOOL_ENTRY_COLLISION_21_READY \
             ROSVIK_VISUAL_TARGET_21_READY \
             ROSVIK_HERO_SCHOOL_21_READY \
             ROSVIK_COZY_BLACKOUT_21_READY \
             ROSVIK_INTERIOR_DIORAMA_21_READY \
-            ROSVIK_WORLD_COHESION_21_READY \
-            ROSVIK_SCHOOL_ENTRY_COLLISION_21_READY; do
+            ROSVIK_WORLD_COHESION_21_READY; do
               grep -q "$marker" runtime.log || { echo "Missing runtime marker: $marker"; cat runtime.log; exit 1; }
           done
 
@@ -104,10 +104,10 @@ jobs:
           test -s build/captures/02_school_sport_rosvalla.png
           test -s build/captures/03_school_interior.png
 
-      - name: Upload Hero 19 captures
+      - name: Upload visual captures
         uses: actions/upload-artifact@v4
         with:
-          name: ROSVIK_BLACKOUT_HeroCaptures19
+          name: ROSVIK_BLACKOUT_HeroCaptures21
           path: build/captures/*.png
           if-no-files-found: error
           retention-days: 30
@@ -120,96 +120,7 @@ jobs:
       - name: Upload playable build
         uses: actions/upload-artifact@v4
         with:
-          name: ROSVIK_BLACKOUT_Windows
-          path: build/ROSVIK_BLACKOUT.exe
-          if-no-files-found: error
-          retention-days: 30
-
-
-      - name: Download Godot 4.6.3 and export templates
-        run: |
-          wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
-          wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz
-          unzip -q Godot_v4.6.3-stable_linux.x86_64.zip
-          chmod +x Godot_v4.6.3-stable_linux.x86_64
-          mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable" /tmp/godot_templates
-          unzip -q Godot_v4.6.3-stable_export_templates.tpz -d /tmp/godot_templates
-          cp -r /tmp/godot_templates/templates/* "$HOME/.local/share/godot/export_templates/4.6.3.stable/"
-
-      - name: Import project
-        run: |
-          ./Godot_v4.6.3-stable_linux.x86_64 --headless --editor --path . --quit
-
-      - name: Runtime smoke test
-        shell: bash
-        run: |
-          set +e
-          ./Godot_v4.6.3-stable_linux.x86_64 --headless --audio-driver Dummy --path . --quit-after 10 2>&1 | tee runtime.log
-          godot_status=${PIPESTATUS[0]}
-          set -e
-          if grep -E "SCRIPT ERROR|Parse Error|Invalid assignment|Invalid call|ERROR:" runtime.log; then
-            echo "Runtime errors detected. Refusing to publish a broken build."
-            exit 1
-          fi
-          [ "$godot_status" -eq 0 ] || exit "$godot_status"
-          for marker in \
-            ROSVIK_HERO_REBUILD_19_READY \
-            ROSVIK_STANDALONE_WORLD_19_READY \
-            ROSVIK_WORLD_LOCKED_CONTROLS_19_READY \
-            ROSVIK_WINTER_PLAYER_19_READY \
-            ROSVIK_SCHOOL_COMPLEX_19_READY \
-            ROSVIK_SOLID_FACADE_19_READY \
-            ROSVIK_ROSVALLA_SINGLE_FIELD_19_READY \
-            ROSVIK_LIVED_INTERIOR_19_READY \
-            ROSVIK_DENSE_LOOT_19_READY \
-            ROSVIK_REFERENCE_MOOD_19_READY \
-            ROSVIK_CC0_WORLD_ASSETS_19_READY \
-            ROSVIK_BLACKOUT_LOOP_19_READY \
-            ROSVIK_SCREEN_RELATIVE_CONTROLS_20_READY \
-            ROSVIK_VISUAL_VERTICAL_SLICE_20_READY \
-            ROSVIK_USABLE_SCHOOL_ENTRANCE_20_READY \
-            ROSVIK_ART_DENSITY_20_READY \
-            ROSVIK_NATURAL_CAMERA_CONTROLS_20_READY; do
-              grep -q "$marker" runtime.log || { echo "Missing runtime marker: $marker"; cat runtime.log; exit 1; }
-          done
-
-      - name: Render visual acceptance captures
-        shell: bash
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq xvfb >/dev/null
-          mkdir -p build/captures
-          set +e
-          xvfb-run -a ./Godot_v4.6.3-stable_linux.x86_64 --rendering-method gl_compatibility --audio-driver Dummy --path . -- --capture-hero 2>&1 | tee capture.log
-          godot_status=${PIPESTATUS[0]}
-          set -e
-          if grep -E "SCRIPT ERROR|Parse Error|Invalid assignment|Invalid call|ERROR:" capture.log; then
-            cat capture.log
-            exit 1
-          fi
-          [ "$godot_status" -eq 0 ] || exit "$godot_status"
-          grep -q ROSVIK_VISUAL_CAPTURE_19_READY capture.log
-          test -s build/captures/01_school_exterior.png
-          test -s build/captures/02_school_sport_rosvalla.png
-          test -s build/captures/03_school_interior.png
-
-      - name: Upload Hero 19 captures
-        uses: actions/upload-artifact@v4
-        with:
-          name: ROSVIK_BLACKOUT_HeroCaptures19
-          path: build/captures/*.png
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Export Windows build
-        run: |
-          mkdir -p build
-          ./Godot_v4.6.3-stable_linux.x86_64 --headless --audio-driver Dummy --path . --export-release "Windows Desktop" build/ROSVIK_BLACKOUT.exe
-
-      - name: Upload playable build
-        uses: actions/upload-artifact@v4
-        with:
-          name: ROSVIK_BLACKOUT_Windows
+          name: ROSVIK_BLACKOUT_Windows_21
           path: build/ROSVIK_BLACKOUT.exe
           if-no-files-found: error
           retention-days: 30

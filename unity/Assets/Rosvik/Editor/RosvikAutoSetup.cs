@@ -52,7 +52,7 @@ namespace Rosvik.Blackout.EditorTools {
         }
 
         static Material Mat(string name, Color c, float smooth=.25f, bool emission=false) {
-            var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            var shader = Shader.Find("Universal Render Pipeline/Lit");\n            if (!shader || !shader.isSupported) shader = Shader.Find("Standard");\n            if (!shader || !shader.isSupported) shader = Shader.Find("Sprites/Default");
             var m = new Material(shader) { name = name, color = c };
             if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness",smooth);
             if (emission) {

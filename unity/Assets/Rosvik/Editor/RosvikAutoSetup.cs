@@ -10,7 +10,7 @@ namespace Rosvik.Blackout.EditorTools {
     [InitializeOnLoad]
     public static class RosvikAutoSetup {
         const string ScenePath = "Assets/Rosvik/Scenes/RosvikHero.unity";
-        const int BuildVersion = 7;
+        const int BuildVersion = 8;
         const string BuildVersionKey = "ROSVIK_UNITY_BOOTSTRAP_VERSION";
 
         static RosvikAutoSetup() => EditorApplication.delayCall += Ensure;
@@ -23,7 +23,7 @@ namespace Rosvik.Blackout.EditorTools {
                 Directory.CreateDirectory("Assets/Rosvik/Scenes");
                 BuildScene();
                 EditorPrefs.SetInt(BuildVersionKey, BuildVersion);
-                Debug.Log("ROSVIK UNITY EXTERIOR V7 BUILT: " + ScenePath);
+                Debug.Log("ROSVIK UNITY EXTERIOR V8 BUILT: " + ScenePath);
             } catch (Exception ex) {
                 Debug.LogError("ROSVIK UNITY SETUP FAILED: " + ex);
             }
@@ -72,6 +72,25 @@ namespace Rosvik.Blackout.EditorTools {
             Cube("Mullion H", root, new Vector3(0f, 0f, -.10f), new Vector3(1.55f, .07f, .05f), frame, false);
         }
 
+        static void GableEnds(Transform parent, float width, float wallHeight, float depth, float rise, Material material) {
+            float x = width * .5f + .01f;
+            float z = depth * .5f;
+            var go = new GameObject("Gable end walls");
+            go.transform.SetParent(parent);
+            go.transform.localPosition = Vector3.zero;
+
+            var mesh = new Mesh { name = "Gable end mesh" };
+            mesh.vertices = new[] {
+                new Vector3(-x, wallHeight, -z), new Vector3(-x, wallHeight, z), new Vector3(-x, wallHeight + rise, 0f),
+                new Vector3( x, wallHeight, -z), new Vector3( x, wallHeight + rise, 0f), new Vector3( x, wallHeight, z)
+            };
+            mesh.triangles = new[] { 0, 1, 2, 3, 4, 5 };
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            go.AddComponent<MeshRenderer>().sharedMaterial = material;
+        }
+
         static void GabledBuilding(Transform parent, string name, Vector3 center, Vector3 size, Material wall, Material trim, Material roof, Material glass) {
             var b = new GameObject(name).transform;
             b.SetParent(parent);
@@ -84,14 +103,33 @@ namespace Rosvik.Blackout.EditorTools {
             Cube("Main mass", b, new Vector3(0f, h * .5f, 0f), new Vector3(w, h, d), wall);
             Cube("Foundation", b, new Vector3(0f, .18f, 0f), new Vector3(w + .35f, .36f, d + .35f), trim);
 
+            // Proper pitched roof geometry. V7 had the pitch signs reversed, so the
+            // roof climbed toward the eaves instead of toward the ridge.
             float angle = 24f;
-            float roofHalfDepth = d * .57f;
-            float rise = Mathf.Tan(angle * Mathf.Deg2Rad) * d * .5f;
-            var leftRoof = Cube("Roof left", b, new Vector3(0f, h + rise * .48f, -d * .26f), new Vector3(w + .7f, .24f, roofHalfDepth), roof, false);
-            leftRoof.transform.localRotation = Quaternion.Euler(angle, 0f, 0f);
-            var rightRoof = Cube("Roof right", b, new Vector3(0f, h + rise * .48f, d * .26f), new Vector3(w + .7f, .24f, roofHalfDepth), roof, false);
-            rightRoof.transform.localRotation = Quaternion.Euler(-angle, 0f, 0f);
-            Cube("Ridge", b, new Vector3(0f, h + rise * .93f, 0f), new Vector3(w + .72f, .16f, .18f), roof, false);
+            float overhang = .42f;
+            float halfRun = d * .5f + overhang;
+            float rise = Mathf.Tan(angle * Mathf.Deg2Rad) * halfRun;
+            float slopeLength = halfRun / Mathf.Cos(angle * Mathf.Deg2Rad);
+            float centerY = h + rise * .5f;
+            float centerZ = halfRun * .5f;
+
+            var backRoof = Cube("Roof back slope", b,
+                new Vector3(0f, centerY, -centerZ),
+                new Vector3(w + overhang * 2f, .20f, slopeLength), roof, false);
+            backRoof.transform.localRotation = Quaternion.Euler(-angle, 0f, 0f);
+
+            var frontRoof = Cube("Roof front slope", b,
+                new Vector3(0f, centerY, centerZ),
+                new Vector3(w + overhang * 2f, .20f, slopeLength), roof, false);
+            frontRoof.transform.localRotation = Quaternion.Euler(angle, 0f, 0f);
+
+            Cube("Ridge cap", b, new Vector3(0f, h + rise + .03f, 0f),
+                new Vector3(w + overhang * 2f + .04f, .16f, .18f), roof, false);
+            Cube("Front fascia", b, new Vector3(0f, h + .01f, d * .5f + overhang),
+                new Vector3(w + overhang * 2f, .24f, .12f), trim, false);
+            Cube("Back fascia", b, new Vector3(0f, h + .01f, -d * .5f - overhang),
+                new Vector3(w + overhang * 2f, .24f, .12f), trim, false);
+            GableEnds(b, w, h, d, Mathf.Tan(angle * Mathf.Deg2Rad) * d * .5f, wall);
 
             int count = Mathf.Max(3, Mathf.FloorToInt(w / 4.1f));
             float step = w / (count + 1);
@@ -101,7 +139,6 @@ namespace Rosvik.Blackout.EditorTools {
                 Window(b, x, d * .501f, 180f, trim, glass);
             }
 
-            // Entrance reads as an actual entrance instead of loose overlapping props.
             float ex = -w * .18f;
             Cube("Entrance recess", b, new Vector3(ex, 1.45f, d * .507f), new Vector3(3.4f, 2.9f, .16f), trim, false);
             Cube("Door glass", b, new Vector3(ex, 1.35f, d * .60f), new Vector3(1.65f, 2.55f, .12f), glass, false);
@@ -136,7 +173,7 @@ namespace Rosvik.Blackout.EditorTools {
         static void BuildScene() {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             scene.name = "RosvikHero";
-            var root = new GameObject("ROSVIK_EXTERIOR_V7").transform;
+            var root = new GameObject("ROSVIK_EXTERIOR_V8").transform;
 
             var snow = Mat("Snow", new Color(.78f, .82f, .83f), .20f);
             var packedSnow = Mat("Packed snow", new Color(.62f, .67f, .68f), .12f);
@@ -151,21 +188,17 @@ namespace Rosvik.Blackout.EditorTools {
             var pine = Mat("Pine", new Color(.10f, .19f, .16f), .10f);
             var warm = Mat("Warm lamp", new Color(1f, .58f, .27f), .35f);
 
-            // One continuous ground plane. Roads and paths sit only a few centimetres above it.
             Cube("Snow terrain", root, new Vector3(0f, -.18f, 0f), new Vector3(92f, .35f, 70f), snow);
             Cube("School road", root, new Vector3(0f, .015f, 18f), new Vector3(70f, .08f, 7.5f), asphalt);
             Cube("Cleared forecourt", root, new Vector3(-5f, .045f, 10.7f), new Vector3(30f, .06f, 6.5f), packedSnow);
             Cube("Footpath", root, new Vector3(-8f, .055f, 7.0f), new Vector3(4.0f, .07f, 12f), packedSnow);
 
-            // Exterior only: coherent connected school volumes, no interior furniture or cutaway geometry.
             GabledBuilding(root, "Rosviks skola - main wing", new Vector3(0f, 0f, -1.0f), new Vector3(31f, 3.6f, 9.2f), wall, trim, roof, glass);
             GabledBuilding(root, "Rosviks skola - side wing", new Vector3(12.0f, 0f, -8.0f), new Vector3(16f, 3.35f, 7.5f), wall, trim, roof, glass);
 
-            // Low linking corridor makes the two masses read as one school complex.
             Cube("Link block", root, new Vector3(8.5f, 1.45f, -5.2f), new Vector3(8.5f, 2.9f, 4.1f), wall);
             Cube("Link roof", root, new Vector3(8.5f, 3.0f, -5.2f), new Vector3(9.0f, .24f, 4.5f), roof, false);
 
-            // Snowbanks along cleared areas.
             for (int i = 0; i < 6; i++) {
                 var drift = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                 drift.name = "Ploughed snow bank";
@@ -176,7 +209,6 @@ namespace Rosvik.Blackout.EditorTools {
                 UnityEngine.Object.DestroyImmediate(drift.GetComponent<Collider>());
             }
 
-            // Tree line frames the school instead of cluttering the building itself.
             Vector3[] trees = {
                 new(-32f,0f,-18f), new(-25f,0f,-20f), new(-18f,0f,-19f),
                 new(24f,0f,-20f), new(31f,0f,-15f), new(35f,0f,-6f),
@@ -188,7 +220,6 @@ namespace Rosvik.Blackout.EditorTools {
             LampPost(root, new Vector3(4f, 0f, 11.5f), trim, warm);
             LampPost(root, new Vector3(19f, 0f, 15.0f), trim, warm);
 
-            // Human-scale placeholder remains deliberately simple, but now stands outside the building.
             var player = new GameObject("PLAYER_PLACEHOLDER");
             player.transform.SetParent(root);
             player.transform.localPosition = new Vector3(-8f, .05f, 13.1f);

@@ -143,10 +143,7 @@ func _decorate_school_exterior19b() -> void:
 		_box(Vector3(0.13,3.25,0.26),school_trim_mat,Vector3(x,1.83,6.39),_art_root19b)
 	# A blue school identity band echoing the real-world municipal public-building language.
 	_box(Vector3(10.6,0.32,0.10),blue,Vector3(7.0,3.95,6.42),_art_root19b)
-	# Snow lip is rounded with repeated low spheres instead of a white roof slab edge.
-	for i: int in range(17):
-		var mound := _sphere19b(0.48,snow_edge,Vector3(-16.0+float(i)*2.0,4.50,6.15),_art_root19b)
-		mound.scale = Vector3(1.35,0.24,0.48)
+	# Roof snow is handled as a continuous layer; repeated scallop blobs were removed in the vertical-slice art pass.
 	# Entrance timber / tactile detail.
 	for x: float in [-6.8,-5.95,-5.10,-4.25,-3.4]:
 		_box(Vector3(0.09,2.38,0.12),warm_wood,Vector3(x,1.43,6.52),_art_root19b)

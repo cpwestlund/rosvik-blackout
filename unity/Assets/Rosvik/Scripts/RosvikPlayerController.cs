@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Rosvik.Blackout {
     [RequireComponent(typeof(CharacterController))]
@@ -11,14 +12,20 @@ namespace Rosvik.Blackout {
         void Awake() => cc = GetComponent<CharacterController>();
 
         void Update() {
-            // World-locked controls: W is always Rosvik-north, regardless of camera orbit.
-            Vector2 input = new(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
-            Vector3 move = new(input.x, 0f, input.y);
+            var kb = Keyboard.current;
+            if (kb == null) return;
+
+            float x = (kb.dKey.isPressed ? 1f : 0f) - (kb.aKey.isPressed ? 1f : 0f);
+            float z = (kb.wKey.isPressed ? 1f : 0f) - (kb.sKey.isPressed ? 1f : 0f);
+            Vector3 move = new(x, 0f, z);
             if (move.sqrMagnitude > 1f) move.Normalize();
-            float speed = Input.GetKey(KeyCode.LeftShift) ? sprintSpeed : walkSpeed;
-            cc.Move(move * speed * Time.deltaTime + Physics.gravity * Time.deltaTime);
+
+            float speed = kb.leftShiftKey.isPressed ? sprintSpeed : walkSpeed;
+            Vector3 gravity = Physics.gravity;
+            cc.Move((move * speed + gravity) * Time.deltaTime);
+
             if (move.sqrMagnitude > .01f) {
-                Quaternion target = Quaternion.LookRotation(move);
+                Quaternion target = Quaternion.LookRotation(move, Vector3.up);
                 transform.rotation = Quaternion.Slerp(transform.rotation, target, turnSpeed * Time.deltaTime);
             }
         }

@@ -4,31 +4,54 @@ using UnityEngine.InputSystem;
 namespace Rosvik.Blackout {
     public class IsometricCameraRig : MonoBehaviour {
         public Transform target;
-        public float yaw = 45f, pitch = 48f, distance = 15f;
-        public float orbitSensitivity = .18f, zoomSensitivity = 1.4f;
-        public float minDistance = 8f, maxDistance = 23f;
-        public Vector3 focusOffset = new(0, 1.1f, 0);
+
+        [Header("Framing")]
+        public float yaw = 45f;
+        public float pitch = 46f;
+        public Vector3 focusOffset = new Vector3(0f, 1.2f, 0f);
+        public float followSharpness = 9f;
+
+        [Header("Orthographic Zoom")]
+        public float orthographicSize = 10.5f;
+        public float minSize = 7.5f;
+        public float maxSize = 15f;
+        public float zoomStep = 0.9f;
+
+        Camera cam;
+        Vector3 smoothedFocus;
+        bool initialized;
+
+        void Awake() {
+            cam = GetComponent<Camera>();
+            if (cam) cam.orthographic = true;
+        }
 
         void LateUpdate() {
             if (!target) return;
+            if (!cam) cam = GetComponent<Camera>();
 
-            var mouse = Mouse.current;
-            if (mouse != null) {
-                if (mouse.middleButton.isPressed) {
-                    Vector2 delta = mouse.delta.ReadValue();
-                    // Grab-style orbit: drag right = world follows right, not inverted.
-                    yaw -= delta.x * orbitSensitivity;
-                    pitch += delta.y * orbitSensitivity;
-                    pitch = Mathf.Clamp(pitch, 32f, 62f);
-                }
-                float scroll = mouse.scroll.ReadValue().y / 120f;
+            if (Mouse.current != null) {
+                float scroll = Mouse.current.scroll.ReadValue().y / 120f;
                 if (Mathf.Abs(scroll) > .01f)
-                    distance = Mathf.Clamp(distance - scroll * zoomSensitivity, minDistance, maxDistance);
+                    orthographicSize = Mathf.Clamp(orthographicSize - scroll * zoomStep, minSize, maxSize);
             }
 
-            Quaternion rot = Quaternion.Euler(pitch, yaw, 0);
-            Vector3 focus = target.position + focusOffset;
-            transform.SetPositionAndRotation(focus - rot * Vector3.forward * distance, rot);
+            if (cam)
+                cam.orthographicSize = Mathf.Lerp(cam.orthographicSize, orthographicSize, 1f - Mathf.Exp(-10f * Time.deltaTime));
+
+            Vector3 wantedFocus = target.position + focusOffset;
+            if (!initialized) {
+                smoothedFocus = wantedFocus;
+                initialized = true;
+            } else {
+                smoothedFocus = Vector3.Lerp(smoothedFocus, wantedFocus, 1f - Mathf.Exp(-followSharpness * Time.deltaTime));
+            }
+
+            Quaternion rotation = Quaternion.Euler(pitch, yaw, 0f);
+            // Camera angle is intentionally fixed. This keeps WASD readable and prevents
+            // the disorienting rotating-controls problem from the prototype.
+            Vector3 offset = rotation * new Vector3(0f, 0f, -22f);
+            transform.SetPositionAndRotation(smoothedFocus + offset, rotation);
         }
     }
 }

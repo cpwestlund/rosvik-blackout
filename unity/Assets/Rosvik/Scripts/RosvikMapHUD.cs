@@ -58,8 +58,8 @@ namespace Rosvik.Blackout {
                 GUI.Label(rect, p.name, titleStyle);
             }
 
-            Rect hint = new Rect(16f, Screen.height - 42f, 560f, 26f);
-            GUI.Label(hint, "WASD flyttar • Shift springer • E interagerar • mushjul zoomar", labelStyle);
+            Rect hint = new Rect(16f, Screen.height - 42f, 690f, 26f);
+            GUI.Label(hint, "WASD flyttar • Shift springer • E interagerar • mushjul / +/- zoomar • Home återställer zoom", labelStyle);
         }
     }
 }

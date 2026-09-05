@@ -13,6 +13,8 @@ func _ready() -> void:
 	_upgrade_environment21()
 	_upgrade_school_facade21()
 	_upgrade_school_entry21()
+	_rebuild_front_collision21()
+	_register_complete_front_cutaway19b()
 	_upgrade_schoolyard21()
 	_upgrade_interior21()
 	_upgrade_background_context21()
@@ -22,6 +24,27 @@ func _ready() -> void:
 	print("ROSVIK_COZY_BLACKOUT_21_READY")
 	print("ROSVIK_INTERIOR_DIORAMA_21_READY")
 	print("ROSVIK_WORLD_COHESION_21_READY")
+
+func _unhandled_input(event: InputEvent) -> void:
+	if _capture_mode:
+		return
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_MIDDLE:
+			_camera_dragging = mb.pressed
+			get_viewport().set_input_as_handled()
+		elif mb.button_index == MOUSE_BUTTON_WHEEL_UP and mb.pressed:
+			_ortho_size19b = clampf(_ortho_size19b-0.9,10.5,25.0)
+			get_viewport().set_input_as_handled()
+		elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN and mb.pressed:
+			_ortho_size19b = clampf(_ortho_size19b+0.9,10.5,25.0)
+			get_viewport().set_input_as_handled()
+	elif event is InputEventMouseMotion and _camera_dragging:
+		var mm := event as InputEventMouseMotion
+		# Grab/drag feel: moving mouse right rotates the world right under the cursor.
+		_camera_yaw -= mm.relative.x*0.0054
+		_camera_pitch = clampf(_camera_pitch-mm.relative.y*0.0038,0.44,0.74)
+		get_viewport().set_input_as_handled()
 
 func _upgrade_environment21() -> void:
 	# Stronger late-winter-afternoon separation: cold environment, warm human light.
@@ -59,6 +82,11 @@ func _upgrade_school_facade21() -> void:
 	var trim := _mat(Color("d2d0c4"),0.86)
 	var metal_dark := _mat(Color("263239"),0.62,0.22)
 	var rusty := _mat(Color("6d5141"),0.82,0.10)
+	# Clean continuous facade backing: no accidental holes except the real entrance.
+	var left_back := _box(Vector3(10.5,3.55,0.18),school_wall_mat,Vector3(-11.75,2.02,6.04),facade)
+	var right_back := _box(Vector3(20.2,3.55,0.18),school_wall_mat,Vector3(6.9,2.02,6.04),facade)
+	_school_cutaway.append(left_back)
+	_school_cutaway.append(right_back)
 	# Bottom plinth gives the long facade weight and contact with the ground.
 	_box(Vector3(33.6,0.50,0.20),_textured_mat(Color("6a716f"),0.98,"noise",96,0.028),Vector3(0,0.38,6.13),facade)
 	# Slight timber banding breaks the monolithic slab feeling.
@@ -111,6 +139,33 @@ func _upgrade_school_entry21() -> void:
 	_add_bin20(entry,Vector3(-7.75,0,7.55),Color("465149"))
 	_add_footpath20(entry,Vector3(-5.0,0,7.1),Vector3(-5.2,0,13.2),14)
 	_add_cable21(entry,[Vector3(-2.2,0.10,11.0),Vector3(-3.8,0.09,9.2),Vector3(-5.0,0.08,7.2),Vector3(-5.0,0.10,5.4)])
+
+func _rebuild_front_collision21() -> void:
+	if _school_root == null:
+		return
+	_disable_front_wall_collisions21(_school_root)
+	# Rebuild one authoritative facade collision with a generous 3 m entrance gap.
+	var body_root := Node3D.new()
+	body_root.name = "FrontCollision21"
+	_school_root.add_child(body_root)
+	_collision_box19(body_root,Vector3(10.4,3.8,0.28),Vector3(-11.8,1.9,6.0))
+	_collision_box19(body_root,Vector3(20.4,3.8,0.28),Vector3(6.8,1.9,6.0))
+	print("ROSVIK_SCHOOL_ENTRY_COLLISION_21_READY")
+
+func _disable_front_wall_collisions21(node: Node) -> void:
+	for child: Node in node.get_children():
+		if child is MeshInstance3D:
+			var m := child as MeshInstance3D
+			if m.mesh is BoxMesh:
+				var box := m.mesh as BoxMesh
+				var gp := m.global_position
+				if gp.z > 5.75 and gp.z < 6.35 and box.size.y > 2.0 and box.size.z < 0.5:
+					for gc: Node in m.get_children():
+						if gc is StaticBody3D:
+							var b := gc as StaticBody3D
+							b.collision_layer = 0
+							b.collision_mask = 0
+		_disable_front_wall_collisions21(child)
 
 func _upgrade_schoolyard21() -> void:
 	var yard := Node3D.new()
@@ -293,7 +348,7 @@ func _run_capture_sequence19() -> void:
 	camera.size = 13.6
 	await _capture_view19("01_school_exterior.png",Vector3(18.5,13.2,21.0),Vector3(-2.0,1.35,6.6),false)
 	camera.size = 24.0
-	await _capture_view19("02_school_sport_rosvalla.png",Vector3(52,31,66),Vector3(15,0.8,36),false)
+	await _capture_view19("02_school_sport_rosvalla.png",Vector3(55,38,90),Vector3(9,0.8,53),false)
 	camera.size = 9.0
 	await _capture_view19("03_school_interior.png",Vector3(9.8,8.2,11.2),Vector3(4.2,1.0,-0.6),true)
 	print("ROSVIK_VISUAL_CAPTURE_19_READY files=3")

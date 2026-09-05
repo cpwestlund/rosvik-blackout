@@ -10,7 +10,7 @@ namespace Rosvik.Blackout.EditorTools {
     [InitializeOnLoad]
     public static class RosvikAutoSetup {
         const string ScenePath = "Assets/Rosvik/Scenes/RosvikHero.unity";
-        const int BuildVersion = 9;
+        const int BuildVersion = 10;
         const string BuildVersionKey = "ROSVIK_UNITY_BOOTSTRAP_VERSION";
 
         static RosvikAutoSetup() => EditorApplication.delayCall += Ensure;
@@ -23,7 +23,7 @@ namespace Rosvik.Blackout.EditorTools {
                 Directory.CreateDirectory("Assets/Rosvik/Scenes");
                 BuildScene();
                 EditorPrefs.SetInt(BuildVersionKey, BuildVersion);
-                Debug.Log("ROSVIK REAL CAMPUS V9 BUILT: " + ScenePath);
+                Debug.Log("ROSVIK REAL CAMPUS V10 BUILT: " + ScenePath);
             } catch (Exception ex) {
                 Debug.LogError("ROSVIK UNITY SETUP FAILED: " + ex);
             }
@@ -75,10 +75,14 @@ namespace Rosvik.Blackout.EditorTools {
                 new Vector3(x0,y0,z0), new Vector3(x0,y1,0f), new Vector3(x0,y0,z1),
                 new Vector3(x1,y0,z0), new Vector3(x1,y1,0f), new Vector3(x1,y0,z1)
             };
+
+            // Clockwise winding from the visible outside. V9 had these triangles
+            // reversed, so Unity culled the roof surfaces from above and the school
+            // looked like an open box with a stray roof behind it.
             mesh.triangles = new int[] {
-                0,3,4, 0,4,1,
-                1,4,5, 1,5,2,
-                0,1,2, 3,5,4
+                0,4,3, 0,1,4,
+                1,5,4, 1,2,5,
+                0,2,1, 3,4,5
             };
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
@@ -90,6 +94,11 @@ namespace Rosvik.Blackout.EditorTools {
             roofGo.transform.SetParent(parent, false);
             roofGo.AddComponent<MeshFilter>().sharedMesh = GableRoofMesh(width, depth, wallHeight, rise, overhang);
             roofGo.AddComponent<MeshRenderer>().sharedMaterial = roof;
+
+            // Small ridge/eave details stop the procedural roof reading as a paper-thin polygon.
+            Cube("Ridge cap", parent, new Vector3(0f, wallHeight + rise + .035f, 0f), new Vector3(width + overhang * 2f + .08f, .11f, .15f), roof, false);
+            Cube("Front eave edge", parent, new Vector3(0f, wallHeight + .035f, depth * .5f + overhang), new Vector3(width + overhang * 2f, .10f, .10f), roof, false);
+            Cube("Back eave edge", parent, new Vector3(0f, wallHeight + .035f, -depth * .5f - overhang), new Vector3(width + overhang * 2f, .10f, .10f), roof, false);
         }
 
         static void Window(Transform parent, Vector3 pos, float yaw, Vector2 size, Material trim, Material glass, Material sill) {
@@ -226,7 +235,7 @@ namespace Rosvik.Blackout.EditorTools {
         static void BuildScene() {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             scene.name = "RosvikHero";
-            Transform root = new GameObject("ROSVIK_REAL_CAMPUS_V9").transform;
+            Transform root = new GameObject("ROSVIK_REAL_CAMPUS_V10").transform;
 
             Material snow=Mat("Snow",new Color(.79f,.83f,.85f),.18f);
             Material packed=Mat("Packed snow",new Color(.64f,.68f,.70f),.10f);

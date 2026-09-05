@@ -122,14 +122,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 	elif event is InputEventMouseMotion and _camera_dragging:
 		var mm := event as InputEventMouseMotion
-		# Direct orbit only. Movement never reads these values.
 		_camera_yaw -= mm.relative.x * 0.0062
 		_camera_pitch = clampf(_camera_pitch-mm.relative.y*0.0042,0.38,0.78)
 		get_viewport().set_input_as_handled()
 
-# -----------------------------------------------------------------------------
-# MATERIAL / ATMOSPHERE
-# -----------------------------------------------------------------------------
 func _build_materials19() -> void:
 	snow_mat = _textured_mat(Color("c9d2d4"),0.99,"snow",96,0.025)
 	packed_snow_mat = _textured_mat(Color("b6c1c2"),0.99,"snow",96,0.020)
@@ -174,7 +170,6 @@ func _build_environment19() -> void:
 	env.tonemap_exposure = 0.72
 	env_node.environment = env
 	add_child(env_node)
-
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-31.0,-38.0,0.0)
 	sun.light_color = Color("edc7a5")
@@ -183,12 +178,8 @@ func _build_environment19() -> void:
 	sun.directional_shadow_max_distance = 150.0
 	add_child(sun)
 
-# -----------------------------------------------------------------------------
-# WORLD / ROADS
-# -----------------------------------------------------------------------------
 func _build_ground19() -> void:
 	_solid_box(Vector3(260.0,0.38,220.0),snow_mat,Vector3(12.0,-0.20,35.0),self)
-	# Soft, low patches make the snow surface less like one perfect plane.
 	for p: Vector3 in [Vector3(-38,0,-6),Vector3(34,0,-8),Vector3(88,0,10),Vector3(-48,0,48),Vector3(72,0,58),Vector3(15,0,94)]:
 		_snow_mound19(p,Vector3(7.0,0.18,3.0),0.0)
 
@@ -196,22 +187,17 @@ func _build_roads19() -> void:
 	var road_root := Node3D.new()
 	road_root.name = "AuthoredRoads19"
 	add_child(road_root)
-	# One continuous school road and one continuous sports / ice-hall approach.
 	_strip19([Vector2(-58,14),Vector2(-14,14),Vector2(15,14),Vector2(25,15),Vector2(31,20),Vector2(35,27),Vector2(44,30),Vector2(83,30)],5.6,asphalt_mat,0.018,road_root)
 	_strip19([Vector2(80,29),Vector2(82,43),Vector2(82,66),Vector2(80,92)],5.2,asphalt_mat,0.019,road_root)
 	_strip19([Vector2(-48,-72),Vector2(-48,-30),Vector2(-48,14),Vector2(-48,70)],6.2,asphalt_mat,0.017,road_root)
-	# Pavement from school entrance to the road, and sporthall forecourt.
 	_strip19([Vector2(-5.0,6.5),Vector2(-5.0,11.1)],2.6,path_mat,0.032,road_root)
 	_strip19([Vector2(53,27.0),Vector2(53,29.0)],3.4,path_mat,0.032,road_root)
-	# Parking is set into the snow with no curb blocks or stacked road plates.
 	_box(Vector3(22.0,0.035,10.0),asphalt_mat,Vector3(70.0,0.016,21.5),road_root)
 	var line := _mat(Color("b8b5a9"),0.96)
 	for i: int in range(6):
 		_box(Vector3(0.055,0.012,3.6),line,Vector3(61.3+float(i)*3.45,0.046,23.1),road_root)
-	# School crossing aligned to the actual walkway, one place only.
 	for i: int in range(5):
 		_box(Vector3(0.48,0.012,4.35),line,Vector3(-6.4+float(i)*0.70,0.050,14.0),road_root)
-	# Dirty edges and tire traces visually blend road into winter ground.
 	for x: float in [-29.0,6.0,40.0]:
 		_box(Vector3(13.0,0.010,0.35),dirty_snow_mat,Vector3(x,0.042,16.6),road_root)
 	for x: float in [64.5,67.0]:
@@ -250,9 +236,6 @@ func _strip19(points: Array[Vector2], width: float, material: Material, y: float
 	parent.add_child(node)
 	return node
 
-# -----------------------------------------------------------------------------
-# SCHOOL COMPLEX — PUBLIC SOURCES DESCRIBE THREE ADJACENT SCHOOL BUILDINGS
-# -----------------------------------------------------------------------------
 func _build_school_complex19() -> void:
 	_school_root = Node3D.new()
 	_school_root.name = "RosviksSkola"
@@ -266,45 +249,34 @@ func _build_main_school19(root: Node3D) -> void:
 	var w := 34.0
 	var d := 12.0
 	var h := 4.1
-	# Floor is walkable and walls are complete except for one human-sized entrance.
 	_solid_box(Vector3(w,0.14,d),concrete_mat,Vector3(0,0.07,0),root)
 	_solid_box(Vector3(w,0.28,0.28),school_wall_mat,Vector3(0,h*0.5,-d*0.5),root)
 	_solid_box(Vector3(0.28,h,d),school_wall_mat,Vector3(-w*0.5,h*0.5,0),root)
 	_solid_box(Vector3(0.28,h,d),school_wall_mat,Vector3(w*0.5,h*0.5,0),root)
-	# South/front wall with a single 2.4 m entrance at x=-5.
 	var front_left := _solid_box(Vector3(10.8,h,0.28),school_wall_mat,Vector3(-11.6,h*0.5,d*0.5),root)
 	var front_mid := _solid_box(Vector3(10.4,h,0.28),school_wall_mat,Vector3(1.4,h*0.5,d*0.5),root)
 	var front_right := _solid_box(Vector3(4.2,h,0.28),school_wall_mat,Vector3(14.8,h*0.5,d*0.5),root)
 	_school_cutaway.append(front_left)
 	_school_cutaway.append(front_mid)
 	_school_cutaway.append(front_right)
-
-	# Roof reads as one finished building outside, and disappears only when the player is inside.
 	var roof := _box(Vector3(w+0.65,0.36,d+0.65),roof_mat,Vector3(0,h+0.18,0),root)
 	var roof_snow := _box(Vector3(w+0.35,0.14,d+0.35),packed_snow_mat,Vector3(0,h+0.43,0),root)
 	_school_cutaway.append(roof)
 	_school_cutaway.append(roof_snow)
-	# Fascia and gutters.
 	_box(Vector3(w+0.70,0.30,0.20),dark_mat,Vector3(0,h+0.10,d*0.5+0.28),root)
 	for x: float in [-16.7,16.7]:
 		_solid_cylinder(0.045,3.75,metal_mat,Vector3(x,1.88,d*0.5+0.25),root)
-
-	# Facade windows: frames, deep sills and mixed blackout / powered panes.
 	for x: float in [-14.5,-11.8,-9.1,-0.8,2.0,4.8,7.6,10.4,13.2]:
 		_add_school_window19(root,Vector3(x,2.15,d*0.5+0.16),x in [-11.8,2.0,7.6])
-
-	# Entrance composition: canopy, open glazed leaf, signage physically attached.
 	_box(Vector3(5.2,0.30,2.5),roof_mat,Vector3(-5.1,3.20,7.05),root)
 	_box(Vector3(4.8,0.11,2.15),packed_snow_mat,Vector3(-5.1,3.41,7.02),root)
 	for x: float in [-7.0,-3.2]:
 		_solid_box(Vector3(0.16,3.0,0.16),dark_mat,Vector3(x,1.5,6.85),root)
 	var door := _box(Vector3(1.10,2.55,0.10),glass_cold_mat,Vector3(-6.28,1.30,6.45),root)
 	door.rotation.y = -0.86
-	var sign_board := _box(Vector3(7.8,0.68,0.12),dark_mat,Vector3(5.7,3.52,6.23),root)
+	_box(Vector3(7.8,0.68,0.12),dark_mat,Vector3(5.7,3.52,6.23),root)
 	_label3d19("ROSVIKS SKOLA",Vector3(5.7,3.53,6.31),root,28)
 	_world_prop_count += 1
-
-	# Warm entrance pool exists only when reserve power is restored.
 	var entrance_light := OmniLight3D.new()
 	entrance_light.position = Vector3(-5.1,2.85,7.35)
 	entrance_light.light_color = Color("ffd093")
@@ -313,7 +285,6 @@ func _build_main_school19(root: Node3D) -> void:
 	entrance_light.shadow_enabled = true
 	root.add_child(entrance_light)
 	_school_lights.append(entrance_light)
-
 	_build_school_interior19(root)
 
 func _add_school_window19(root: Node3D,pos: Vector3,powered: bool) -> void:
@@ -333,37 +304,31 @@ func _build_school_interior19(root: Node3D) -> void:
 	var wall_mat := _mat(Color("c8c7be"),0.96)
 	var locker_mat := _mat(Color("66777b"),0.88,0.05)
 	var notice_mat := _mat(Color("8e6e50"),0.97)
-	# Warm corridor + one classroom; enough density to feel authored, not six empty demo rooms.
 	_box(Vector3(30.8,0.055,3.35),corridor_mat,Vector3(0,0.16,3.75),root)
 	_box(Vector3(14.2,0.055,7.3),floor_mat,Vector3(7.7,0.16,-1.55),root)
-	# Corridor/classroom dividing wall with a doorway.
 	_solid_box(Vector3(12.0,3.25,0.22),wall_mat,Vector3(-9.8,1.78,1.90),root)
 	_solid_box(Vector3(7.0,3.25,0.22),wall_mat,Vector3(1.5,1.78,1.90),root)
 	_solid_box(Vector3(8.4,3.25,0.22),wall_mat,Vector3(12.8,1.78,1.90),root)
 	_solid_box(Vector3(0.22,3.25,7.3),wall_mat,Vector3(0.5,1.78,-1.55),root)
-
-	# Coat zone: lockers, low bench, hooks, boots and abandoned backpacks.
 	for i: int in range(10):
 		var x := -14.3+float(i)*0.88
 		_solid_box(Vector3(0.72,1.72,0.40),locker_mat,Vector3(x,1.02,5.53),root)
 		_box(Vector3(0.20,0.04,0.03),metal_mat,Vector3(x,1.15,5.30),root)
 	for i: int in range(8):
 		var x := -14.2+float(i)*1.02
-		_cylinder(0.035,0.14,metal_mat,Vector3(x,1.92,2.10),root).rotation_x = PI/2.0
+		var hook := _cylinder(0.035,0.14,metal_mat,Vector3(x,1.92,2.10),root)
+		hook.rotation.x = PI/2.0
 	_add_bench19(root,Vector3(-10.8,0.0,3.05),3.2)
 	for i: int in range(7):
 		var boot := _capsule19(0.12,0.30,_mat(Color("33393b").lightened(float(i%3)*0.04),0.99),Vector3(-13.6+float(i)*0.62,0.30,3.48+float(i%2)*0.28),root)
 		boot.rotation_degrees.x = 90.0
 	for i: int in range(4):
 		_add_backpack19(root,Vector3(-8.1+float(i)*0.62,0.33,5.15),Color("665447").lightened(float(i)*0.04))
-
-	# Notice board, children's drawings and everyday traces.
 	_box(Vector3(3.4,1.25,0.08),notice_mat,Vector3(-3.6,1.90,2.04),root)
+	var paper_palette: Array[Color] = [Color("d7d2bd"),Color("b7c8d0"),Color("d5b7a4"),Color("c8c59c")]
 	for i: int in range(10):
-		var paper_color := [Color("d7d2bd"),Color("b7c8d0"),Color("d5b7a4"),Color("c8c59c")][i%4]
+		var paper_color: Color = paper_palette[i%4]
 		_box(Vector3(0.34,0.44,0.025),_mat(paper_color,0.99),Vector3(-4.9+float(i%5)*0.63,1.65+float(i/5)*0.57,2.10),root)
-
-	# Classroom furniture uses CC0 Kenney Furniture Kit assets, but gets collision anchors here.
 	for row: int in range(2):
 		for col: int in range(3):
 			var p := Vector3(4.2+float(col)*3.0,0.16,-0.2-float(row)*2.35)
@@ -371,22 +336,18 @@ func _build_school_interior19(root: Node3D) -> void:
 			_asset19("furniture/chair.glb",p+Vector3(0,0,0.85),Vector3.ONE*0.90,PI,root)
 			_collision_box19(root,Vector3(1.4,0.9,0.75),p+Vector3(0,0.45,0))
 			_world_prop_count += 2
-	# Teacher corner, books, monitor and warm table lamp.
 	_asset19("furniture/desk.glb",Vector3(13.4,0.16,-3.8),Vector3.ONE,PI,root)
 	_asset19("furniture/chair.glb",Vector3(13.3,0.16,-2.9),Vector3.ONE,0.0,root)
 	_asset19("furniture/bookshelf.glb",Vector3(1.45,0.16,-4.55),Vector3.ONE,PI/2.0,root)
 	_asset19("furniture/monitor.glb",Vector3(13.25,0.94,-3.65),Vector3.ONE*0.82,PI,root)
 	_asset19("furniture/lamp.glb",Vector3(12.65,0.92,-3.55),Vector3.ONE*0.80,0.0,root)
 	_world_prop_count += 5
-	# Hand-placed mugs, pencils, papers and a thermos keep the room from feeling staged.
 	_add_mug19(root,Vector3(12.9,1.00,-3.30),Color("9a5e46"))
 	_add_thermos19(root,Vector3(13.55,1.04,-3.40))
 	for i: int in range(8):
 		var paper := _box(Vector3(0.42,0.018,0.30),_mat(Color("d6d2c6").darkened(float(i%3)*0.04),0.99),Vector3(3.5+float(i%4)*2.0,0.94,-0.10-float(i/4)*2.35),root)
 		paper.rotation.y = -0.18+float(i)*0.05
 	_world_prop_count += 10
-
-	# Ceiling lights become warm islands when power returns.
 	for x: float in [-11.5,-6.0,-0.5,5.0,10.5]:
 		var fixture_mat := _mat(Color("d9d6ca"),0.78)
 		fixture_mat.emission_enabled = true
@@ -400,8 +361,6 @@ func _build_school_interior19(root: Node3D) -> void:
 		light.omni_range = 4.8
 		root.add_child(light)
 		_school_lights.append(light)
-
-	# Searchable, place-specific loot.
 	_add_searchable19(root,Vector3(-14.5,0.0,5.0),"janitor","VAKTMÄSTARSKÅP",["silvertejp","säkringar","AA-batterier"])
 	_add_searchable19(root,Vector3(13.6,0.0,-4.6),"staff","LÄRARBORD",["nyckelknippa","ficklampa","tändare"])
 	_add_searchable19(root,Vector3(8.6,0.0,-1.5),"bag","ÖVERGIVEN RYGGSÄCK",["choklad","vantar","powerbank"])
@@ -441,18 +400,15 @@ func _build_old_wood_school19(root: Node3D) -> void:
 	_world_prop_count += 4
 
 func _build_schoolyard19(root: Node3D) -> void:
-	# One coherent yard south of the school, not four stacked fence generations.
 	var yard := Node3D.new()
 	yard.name = "Schoolyard19"
 	root.add_child(yard)
 	_box(Vector3(34.0,0.025,13.0),packed_snow_mat,Vector3(0,0.014,13.5),yard)
 	_add_bench19(yard,Vector3(-12.0,0,10.0),2.6)
 	_add_bench19(yard,Vector3(9.5,0,10.6),2.4)
-	# Bike rack grounded in snow.
 	for i: int in range(7):
 		var rack := _cylinder(0.026,0.92,metal_mat,Vector3(6.7+float(i)*0.52,0.45,8.6),yard)
 		rack.rotation.x = PI/2.0
-	# One modest play frame, deliberately off the road.
 	for x: float in [-1.4,1.4]:
 		_solid_cylinder(0.065,2.25,wood_mat,Vector3(x,1.12,18.0),yard)
 	var beam := _cylinder(0.07,3.0,metal_mat,Vector3(0,2.10,18.0),yard)
@@ -460,20 +416,14 @@ func _build_schoolyard19(root: Node3D) -> void:
 	for x: float in [-0.55,0.55]:
 		_cylinder(0.015,1.10,metal_mat,Vector3(x,1.53,18.0),yard)
 		_box(Vector3(0.54,0.06,0.34),wood_mat,Vector3(x,0.96,18.0),yard)
-	# Grounded fence only on the exposed edge.
 	_add_fence19(yard,Vector3(-17,0,20),Vector3(17,0,20))
-	# Snow banks follow plough logic at yard perimeter.
 	for p: Vector3 in [Vector3(-15,0,19.3),Vector3(-7,0,19.6),Vector3(10,0,19.6),Vector3(16,0,17.2)]:
 		_snow_mound19(p,Vector3(2.2,0.34,0.70),0.05)
-	# Footprints from crossing to entrance.
 	for i: int in range(16):
 		var foot := _box(Vector3(0.16,0.015,0.30),dirty_snow_mat,Vector3(-5.2+float(i%2)*0.26,0.048,11.3-float(i)*0.31),yard)
 		foot.rotation.y = -0.10 if i%2==0 else 0.10
 	_world_prop_count += 32
 
-# -----------------------------------------------------------------------------
-# SPORT HALL — SOLID EXTERIOR, NO CUT OPEN WALL
-# -----------------------------------------------------------------------------
 func _build_sporthall19() -> void:
 	var root := Node3D.new()
 	root.name = "RosvikSporthall"
@@ -485,40 +435,31 @@ func _build_sporthall19() -> void:
 	_solid_box(Vector3(w,h,d),sport_wall_mat,Vector3(0,h*0.5,0),root)
 	_box(Vector3(w+0.7,0.38,d+0.7),roof_mat,Vector3(0,h+0.18,0),root)
 	_box(Vector3(w+0.35,0.14,d+0.35),packed_snow_mat,Vector3(0,h+0.42,0),root)
-	# Vertical facade rhythm and low base.
 	for x: float in [-12,-8,-4,0,4,8,12]:
 		_box(Vector3(0.055,5.5,0.12),metal_mat,Vector3(x,3.15,9.06),root)
 	_box(Vector3(27.6,0.75,0.14),dark_mat,Vector3(0,0.38,9.08),root)
-	# Entrance block sits on the facade instead of carving out half the wall.
 	_solid_box(Vector3(7.0,3.0,2.4),_textured_mat(Color("46545a"),0.88,"vertical",72,0.022),Vector3(-4.0,1.5,10.0),root)
 	_box(Vector3(3.5,2.25,0.12),glass_cold_mat,Vector3(-4.0,1.20,11.24),root)
 	_box(Vector3(5.6,0.28,2.5),roof_mat,Vector3(-4.0,3.10,11.1),root)
-	var board := _box(Vector3(9.5,0.72,0.12),dark_mat,Vector3(4.4,4.85,9.14),root)
+	_box(Vector3(9.5,0.72,0.12),dark_mat,Vector3(4.4,4.85,9.14),root)
 	_label3d19("ROSVIK SPORTHALL",Vector3(4.4,4.86,9.22),root,27)
-	# Modest service details around the back/east side.
 	_box(Vector3(1.0,1.35,0.45),metal_mat,Vector3(14.1,0.68,3.0),root)
 	_asset19("nature/lamppost.glb",Vector3(-10.5,0.0,13.0),Vector3.ONE*1.20,0.0,root)
 	_asset19("nature/lamppost.glb",Vector3(10.5,0.0,13.0),Vector3.ONE*1.20,0.0,root)
 	_world_prop_count += 4
 
-# -----------------------------------------------------------------------------
-# ROSVALLA — ONE COHERENT OUTDOOR FOOTBALL FIELD
-# -----------------------------------------------------------------------------
 func _build_rosvalla19() -> void:
 	var root := Node3D.new()
 	root.name = "Rosvalla19"
 	add_child(root)
 	var center := Vector3(9.0,0.0,53.0)
-	var field_size := Vector3(64.0,0.035,38.0)
-	_box(field_size,field_mat,center+Vector3(0,0.018,0),root)
-	# Snow-softened touchlines, not five individual mini-pitches.
+	_box(Vector3(64.0,0.035,38.0),field_mat,center+Vector3(0,0.018,0),root)
 	var line := _mat(Color("d2d1c6"),0.98)
 	_box(Vector3(62.0,0.012,0.09),line,center+Vector3(0,0.045,-18.0),root)
 	_box(Vector3(62.0,0.012,0.09),line,center+Vector3(0,0.045,18.0),root)
 	_box(Vector3(0.09,0.012,36.0),line,center+Vector3(-31.0,0.045,0),root)
 	_box(Vector3(0.09,0.012,36.0),line,center+Vector3(31.0,0.045,0),root)
 	_box(Vector3(0.09,0.012,36.0),line,center+Vector3(0,0.045,0),root)
-	# Centre circle as short segments.
 	for i: int in range(24):
 		var a := float(i)/24.0*TAU
 		var p := center+Vector3(cos(a)*4.4,0.055,sin(a)*4.4)
@@ -526,48 +467,27 @@ func _build_rosvalla19() -> void:
 		dash.rotation.y = -a
 	_add_goal19(root,center+Vector3(-31.7,0,0),PI/2.0)
 	_add_goal19(root,center+Vector3(31.7,0,0),-PI/2.0)
-	# Perimeter fence only, with gates towards sporthall and school.
 	_add_fence19(root,center+Vector3(-32.8,0,-20.0),center+Vector3(32.8,0,-20.0))
 	_add_fence19(root,center+Vector3(-32.8,0,20.0),center+Vector3(18.0,0,20.0))
 	_add_fence19(root,center+Vector3(24.0,0,20.0),center+Vector3(32.8,0,20.0))
-	# Four light towers establish the sports ground silhouette.
 	for p: Vector3 in [center+Vector3(-27,0,-20.8),center+Vector3(27,0,-20.8),center+Vector3(-27,0,20.8),center+Vector3(27,0,20.8)]:
 		_add_field_light19(root,p)
-	# Windblown snow encroaches on corners after days without maintenance.
 	for p: Vector3 in [center+Vector3(-29,0,-17),center+Vector3(28,0,16),center+Vector3(-30,0,15)]:
 		_snow_mound19(p,Vector3(3.0,0.28,1.1),0.0)
 	_world_prop_count += 80
 
-# -----------------------------------------------------------------------------
-# BACKGROUND / CC0 ASSETS
-# -----------------------------------------------------------------------------
 func _build_background19() -> void:
 	var root := Node3D.new()
 	root.name = "RosvikContext19"
 	add_child(root)
-	# Distant houses are context only; hero buildings stay bespoke.
-	for spec: Dictionary in [
-		{"p":Vector3(-63,0,-10),"r":0.12,"s":0.72},{"p":Vector3(-68,0,12),"r":-0.08,"s":0.70},
-		{"p":Vector3(96,0,-5),"r":0.20,"s":0.75},{"p":Vector3(103,0,18),"r":-0.12,"s":0.72}
-	]:
-		_asset19("buildings/small-house.glb",spec["p"],Vector3.ONE*float(spec["s"]),float(spec["r"]),root)
-	# Forest edge. Trees are real CC0 meshes, spaced manually so it reads like a place.
-	var trees: Array[Vector3] = [
-		Vector3(-74,0,-32),Vector3(-69,0,-42),Vector3(-61,0,-52),Vector3(-80,0,31),Vector3(-72,0,46),
-		Vector3(-62,0,74),Vector3(-45,0,91),Vector3(-25,0,100),Vector3(2,0,104),Vector3(31,0,103),
-		Vector3(58,0,100),Vector3(89,0,97),Vector3(103,0,76),Vector3(106,0,50),Vector3(108,0,33),
-		Vector3(106,0,-25),Vector3(88,0,-40),Vector3(65,0,-49),Vector3(42,0,-55)
-	]
+	var trees: Array[Vector3] = [Vector3(-74,0,-32),Vector3(-69,0,-42),Vector3(-61,0,-52),Vector3(-80,0,31),Vector3(-72,0,46),Vector3(-62,0,74),Vector3(-45,0,91),Vector3(-25,0,100),Vector3(2,0,104),Vector3(31,0,103),Vector3(58,0,100),Vector3(89,0,97),Vector3(103,0,76),Vector3(106,0,50),Vector3(108,0,33),Vector3(106,0,-25),Vector3(88,0,-40),Vector3(65,0,-49),Vector3(42,0,-55)]
 	for i: int in range(trees.size()):
 		var scale_value := 1.15+float(i%4)*0.12
 		_asset19("nature/tree-pine.glb",trees[i],Vector3.ONE*scale_value,float(i)*0.37,root)
-	# Bushes / rocks around public edges, not randomly on roads.
 	for p: Vector3 in [Vector3(-32,0,24),Vector3(-28,0,27),Vector3(31,0,7),Vector3(36,0,7),Vector3(73,0,9),Vector3(77,0,8)]:
 		_asset19("nature/bush.glb",p,Vector3.ONE*0.75,0.0,root)
 	for p: Vector3 in [Vector3(-34,0,25),Vector3(35,0,8),Vector3(75,0,10)]:
 		_asset19("nature/rock.glb",p,Vector3.ONE*0.72,0.0,root)
-
-	# A distant, intentionally low-detail ice-hall mass establishes southward continuity.
 	var hala := Node3D.new()
 	hala.name = "HALAHallenContext19"
 	hala.position = Vector3(66,0,84)
@@ -577,9 +497,6 @@ func _build_background19() -> void:
 	_box(Vector3(34.4,0.13,19.4),packed_snow_mat,Vector3(0,7.20,0),hala)
 	_world_prop_count += 3
 
-# -----------------------------------------------------------------------------
-# GAMEPLAY / BLACKOUT
-# -----------------------------------------------------------------------------
 func _build_gameplay19() -> void:
 	var root := Node3D.new()
 	root.name = "BlackoutGameplay19"
@@ -593,7 +510,6 @@ func _build_gameplay19() -> void:
 	_cable_connected_visual.name = "ConnectedCable19"
 	_cable_connected_visual.visible = false
 	root.add_child(_cable_connected_visual)
-	# Cable follows the ground and road edge, never floats between endpoints.
 	_strip19([Vector2(72,15),Vector2(68,17),Vector2(61,18),Vector2(53,17),Vector2(42,15.5),Vector2(28,13),Vector2(20,9),Vector2(17.2,4.1)],0.10,dark_mat,0.065,_cable_connected_visual)
 	_add_searchable19(root,Vector3(65.2,0.0,14.0),"sport_service","SPORTHALLENS SERVICEHYLLA",["första hjälpen","rep","arbetslampa"])
 	_add_searchable19(root,Vector3(74.0,0.0,22.5),"parking_car","ÖVERGIVEN BIL",["isskrapa","filt","USB-kabel"])
@@ -749,7 +665,10 @@ func _interact19() -> void:
 			else:
 				_searched[id_value] = true
 				var items: Array = data["items"]
-				_toast19("Hittat: %s" % ", ".join(items))
+				var item_strings := PackedStringArray()
+				for item: Variant in items:
+					item_strings.append(String(item))
+				_toast19("Hittat: %s" % ", ".join(item_strings))
 	_refresh_ui19()
 
 func _set_school_power19(on: bool) -> void:
@@ -759,9 +678,6 @@ func _set_school_power19(on: bool) -> void:
 		var m := _school_windows[i].material_override as StandardMaterial3D
 		m.emission_energy_multiplier = 1.25 if on and i%3 != 0 else 0.0
 
-# -----------------------------------------------------------------------------
-# PLAYER / CAMERA / CUTAWAY
-# -----------------------------------------------------------------------------
 func _build_player19() -> void:
 	player = CharacterBody3D.new()
 	player.set_script(PLAYER_SCRIPT)
@@ -812,9 +728,6 @@ func _set_cutaway19(inside: bool) -> void:
 		if is_instance_valid(node):
 			node.visible = not inside
 
-# -----------------------------------------------------------------------------
-# UI
-# -----------------------------------------------------------------------------
 func _build_ui19() -> void:
 	_ui_layer = CanvasLayer.new()
 	add_child(_ui_layer)
@@ -849,7 +762,6 @@ func _build_ui19() -> void:
 	_status_label.add_theme_font_size_override("font_size",12)
 	_status_label.modulate = Color("b6c5c5")
 	panel.add_child(_status_label)
-
 	_prompt_label = Label.new()
 	_prompt_label.position = Vector2(620,825)
 	_prompt_label.size = Vector2(360,42)
@@ -890,9 +802,6 @@ func _toast19(text: String) -> void:
 		_toast_label.text = text
 		_toast_time = 4.0
 
-# -----------------------------------------------------------------------------
-# HERO CAPTURES — CI produces three actual rendered views before Windows export.
-# -----------------------------------------------------------------------------
 func _run_capture_sequence19() -> void:
 	_set_school_power19(true)
 	_school_powered = true
@@ -919,9 +828,6 @@ func _capture_view19(filename: String,cam_pos: Vector3,focus: Vector3,cutaway: b
 	if err != OK:
 		push_error("Capture failed: %s" % path)
 
-# -----------------------------------------------------------------------------
-# SMALL AUTHORED PROPS
-# -----------------------------------------------------------------------------
 func _add_bench19(parent: Node3D,pos: Vector3,length: float) -> void:
 	_box(Vector3(length,0.13,0.46),wood_mat,pos+Vector3(0,0.55,0),parent)
 	_box(Vector3(length,0.12,0.20),wood_mat,pos+Vector3(0,0.96,-0.20),parent)
@@ -937,7 +843,7 @@ func _add_backpack19(parent: Node3D,pos: Vector3,color: Color) -> void:
 	_world_prop_count += 2
 
 func _add_mug19(parent: Node3D,pos: Vector3,color: Color) -> void:
-	var mug := _cylinder(0.10,0.18,_mat(color,0.90),pos,parent)
+	_cylinder(0.10,0.18,_mat(color,0.90),pos,parent)
 	var handle := TorusMesh.new()
 	handle.inner_radius = 0.035
 	handle.outer_radius = 0.065
@@ -1011,9 +917,6 @@ func _snow_mound19(pos: Vector3,scale_value: Vector3,yaw: float) -> void:
 	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	add_child(node)
 
-# -----------------------------------------------------------------------------
-# ASSET LOADING
-# -----------------------------------------------------------------------------
 func _asset19(relative_path: String,pos: Vector3,scale_value: Vector3,yaw: float,parent: Node) -> Node3D:
 	var path := ASSET_DIR+relative_path
 	var packed: PackedScene = _asset_cache.get(path,null) as PackedScene
@@ -1032,9 +935,6 @@ func _asset19(relative_path: String,pos: Vector3,scale_value: Vector3,yaw: float
 	_asset_count += 1
 	return instance
 
-# -----------------------------------------------------------------------------
-# GEOMETRY HELPERS
-# -----------------------------------------------------------------------------
 func _mat(color: Color,rough: float=0.88,metallic: float=0.0) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.albedo_color = color

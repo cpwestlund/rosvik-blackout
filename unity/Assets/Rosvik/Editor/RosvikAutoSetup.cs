@@ -192,7 +192,8 @@ namespace Rosvik.Blackout.EditorTools {
             EditorSceneManager.SaveScene(scene,ScenePath);
             EditorBuildSettings.scenes=new[]{new EditorBuildSettingsScene(ScenePath,true)};
             Selection.activeGameObject=player;
-            EditorPrefs.SetInt(BuildVersionKey, BuildVersion);\n            Debug.Log("ROSVIK UNITY HERO SLICE BUILT: "+ScenePath);
+            EditorPrefs.SetInt(BuildVersionKey, BuildVersion);
+            Debug.Log("ROSVIK UNITY HERO SLICE BUILT: "+ScenePath);
         }
     }
 }

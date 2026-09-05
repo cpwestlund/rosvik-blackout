@@ -2,8 +2,8 @@
 namespace Rosvik.Blackout.EditorTools {
     // Temporary compile shim for the procedural scene builder.
     // RosvikAutoSetup historically used the unqualified name `Scene` without
-    // importing UnityEngine.SceneManagement. This wrapper keeps V10 compiling
-    // without requiring manual edits in the local Unity project.
+    // importing UnityEngine.SceneManagement. Keep that legacy code compiling,
+    // while exposing the scene members used by newer editor passes.
     public struct Scene {
         UnityEngine.SceneManagement.Scene inner;
 
@@ -18,6 +18,18 @@ namespace Rosvik.Blackout.EditorTools {
         public string name {
             get { return inner.name; }
             set { /* The scene asset name is established by SaveScene(path). */ }
+        }
+
+        public string path {
+            get { return inner.path; }
+        }
+
+        public bool isLoaded {
+            get { return inner.isLoaded; }
+        }
+
+        public bool IsValid() {
+            return inner.IsValid();
         }
     }
 }

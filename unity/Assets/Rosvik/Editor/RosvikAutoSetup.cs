@@ -10,7 +10,7 @@ namespace Rosvik.Blackout.EditorTools {
     [InitializeOnLoad]
     public static class RosvikAutoSetup {
         const string ScenePath = "Assets/Rosvik/Scenes/RosvikHero.unity";
-        const int BuildVersion = 8;
+        const int BuildVersion = 9;
         const string BuildVersionKey = "ROSVIK_UNITY_BOOTSTRAP_VERSION";
 
         static RosvikAutoSetup() => EditorApplication.delayCall += Ensure;
@@ -23,13 +23,13 @@ namespace Rosvik.Blackout.EditorTools {
                 Directory.CreateDirectory("Assets/Rosvik/Scenes");
                 BuildScene();
                 EditorPrefs.SetInt(BuildVersionKey, BuildVersion);
-                Debug.Log("ROSVIK UNITY EXTERIOR V8 BUILT: " + ScenePath);
+                Debug.Log("ROSVIK REAL CAMPUS V9 BUILT: " + ScenePath);
             } catch (Exception ex) {
                 Debug.LogError("ROSVIK UNITY SETUP FAILED: " + ex);
             }
         }
 
-        static Material Mat(string name, Color color, float smooth = .18f) {
+        static Material Mat(string name, Color color, float smooth = .16f) {
             Shader shader = GraphicsSettings.defaultRenderPipeline != null
                 ? Shader.Find("Universal Render Pipeline/Lit")
                 : Shader.Find("Standard");
@@ -39,238 +39,291 @@ namespace Rosvik.Blackout.EditorTools {
             return mat;
         }
 
-        static GameObject Cube(string name, Transform parent, Vector3 position, Vector3 scale, Material material, bool collider = true) {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        static GameObject Cube(string name, Transform parent, Vector3 pos, Vector3 scale, Material mat, bool collider = true) {
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = name;
             go.transform.SetParent(parent);
-            go.transform.localPosition = position;
+            go.transform.localPosition = pos;
             go.transform.localScale = scale;
-            go.GetComponent<Renderer>().sharedMaterial = material;
+            go.GetComponent<Renderer>().sharedMaterial = mat;
             if (!collider) UnityEngine.Object.DestroyImmediate(go.GetComponent<Collider>());
             return go;
         }
 
-        static GameObject Cylinder(string name, Transform parent, Vector3 position, Vector3 scale, Material material, bool collider = false) {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        static GameObject Cylinder(string name, Transform parent, Vector3 pos, Vector3 scale, Material mat, bool collider = false) {
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             go.name = name;
             go.transform.SetParent(parent);
-            go.transform.localPosition = position;
+            go.transform.localPosition = pos;
             go.transform.localScale = scale;
-            go.GetComponent<Renderer>().sharedMaterial = material;
+            go.GetComponent<Renderer>().sharedMaterial = mat;
             if (!collider) UnityEngine.Object.DestroyImmediate(go.GetComponent<Collider>());
             return go;
         }
 
-        static void Window(Transform parent, float x, float z, float yaw, Material frame, Material glass) {
-            var root = new GameObject("Window").transform;
-            root.SetParent(parent);
-            root.localPosition = new Vector3(x, 1.85f, z);
-            root.localRotation = Quaternion.Euler(0f, yaw, 0f);
-            Cube("Frame", root, Vector3.zero, new Vector3(1.7f, 1.35f, .10f), frame, false);
-            Cube("Glass", root, new Vector3(0f, 0f, -.061f), new Vector3(1.45f, 1.10f, .03f), glass, false);
-            Cube("Mullion V", root, new Vector3(0f, 0f, -.10f), new Vector3(.07f, 1.22f, .05f), frame, false);
-            Cube("Mullion H", root, new Vector3(0f, 0f, -.10f), new Vector3(1.55f, .07f, .05f), frame, false);
-        }
+        static Mesh GableRoofMesh(float width, float depth, float wallHeight, float rise, float overhang) {
+            float x0 = -width * .5f - overhang;
+            float x1 = width * .5f + overhang;
+            float z0 = -depth * .5f - overhang;
+            float z1 = depth * .5f + overhang;
+            float y0 = wallHeight;
+            float y1 = wallHeight + rise;
 
-        static void GableEnds(Transform parent, float width, float wallHeight, float depth, float rise, Material material) {
-            float x = width * .5f + .01f;
-            float z = depth * .5f;
-            var go = new GameObject("Gable end walls");
-            go.transform.SetParent(parent);
-            go.transform.localPosition = Vector3.zero;
-
-            var mesh = new Mesh { name = "Gable end mesh" };
-            mesh.vertices = new[] {
-                new Vector3(-x, wallHeight, -z), new Vector3(-x, wallHeight, z), new Vector3(-x, wallHeight + rise, 0f),
-                new Vector3( x, wallHeight, -z), new Vector3( x, wallHeight + rise, 0f), new Vector3( x, wallHeight, z)
+            Mesh mesh = new Mesh();
+            mesh.name = "GableRoofMesh";
+            mesh.vertices = new Vector3[] {
+                new Vector3(x0,y0,z0), new Vector3(x0,y1,0f), new Vector3(x0,y0,z1),
+                new Vector3(x1,y0,z0), new Vector3(x1,y1,0f), new Vector3(x1,y0,z1)
             };
-            mesh.triangles = new[] { 0, 1, 2, 3, 4, 5 };
+            mesh.triangles = new int[] {
+                0,3,4, 0,4,1,
+                1,4,5, 1,5,2,
+                0,1,2, 3,5,4
+            };
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
-            go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            go.AddComponent<MeshRenderer>().sharedMaterial = material;
+            return mesh;
         }
 
-        static void GabledBuilding(Transform parent, string name, Vector3 center, Vector3 size, Material wall, Material trim, Material roof, Material glass) {
-            var b = new GameObject(name).transform;
+        static void AddRoof(Transform parent, float width, float depth, float wallHeight, float rise, float overhang, Material roof) {
+            GameObject roofGo = new GameObject("Roof");
+            roofGo.transform.SetParent(parent, false);
+            roofGo.AddComponent<MeshFilter>().sharedMesh = GableRoofMesh(width, depth, wallHeight, rise, overhang);
+            roofGo.AddComponent<MeshRenderer>().sharedMaterial = roof;
+        }
+
+        static void Window(Transform parent, Vector3 pos, float yaw, Vector2 size, Material trim, Material glass, Material sill) {
+            Transform root = new GameObject("Window").transform;
+            root.SetParent(parent);
+            root.localPosition = pos;
+            root.localRotation = Quaternion.Euler(0f, yaw, 0f);
+
+            Cube("Frame", root, Vector3.zero, new Vector3(size.x + .18f, size.y + .18f, .11f), trim, false);
+            Cube("Glass", root, new Vector3(0f, 0f, -.055f), new Vector3(size.x, size.y, .03f), glass, false);
+            Cube("Mullion V", root, new Vector3(0f, 0f, -.08f), new Vector3(.055f, size.y, .04f), trim, false);
+            Cube("Mullion H", root, new Vector3(0f, 0f, -.08f), new Vector3(size.x, .055f, .04f), trim, false);
+            Cube("Sill", root, new Vector3(0f, -size.y * .5f - .15f, .04f), new Vector3(size.x + .24f, .08f, .22f), sill, false);
+        }
+
+        static void Door(Transform parent, Vector3 pos, float yaw, float width, float height, Material trim, Material glass, Material panel) {
+            Transform root = new GameObject("Entrance door").transform;
+            root.SetParent(parent);
+            root.localPosition = pos;
+            root.localRotation = Quaternion.Euler(0f, yaw, 0f);
+
+            Cube("Door frame", root, Vector3.zero, new Vector3(width + .26f, height + .22f, .14f), trim, false);
+            Cube("Door panel", root, new Vector3(0f, 0f, -.075f), new Vector3(width, height, .06f), panel, false);
+            Cube("Door glass upper", root, new Vector3(0f, height * .18f, -.115f), new Vector3(width * .72f, height * .45f, .025f), glass, false);
+            Cube("Handle", root, new Vector3(width * .28f, -.10f, -.15f), new Vector3(.045f, .38f, .04f), trim, false);
+        }
+
+        static void MainSeventiesSchool(Transform parent, Vector3 center, Material wall, Material trim, Material roof, Material glass, Material concrete) {
+            Transform b = new GameObject("Huvudbyggnaden - 1970-tal").transform;
             b.SetParent(parent);
             b.localPosition = center;
 
-            float w = size.x;
-            float h = size.y;
-            float d = size.z;
+            float w = 35f, h = 3.25f, d = 10.8f;
+            Cube("Main mass", b, new Vector3(0f, h*.5f, 0f), new Vector3(w,h,d), wall);
+            Cube("Dark foundation", b, new Vector3(0f,.22f,0f), new Vector3(w+.35f,.44f,d+.35f), trim);
 
-            Cube("Main mass", b, new Vector3(0f, h * .5f, 0f), new Vector3(w, h, d), wall);
-            Cube("Foundation", b, new Vector3(0f, .18f, 0f), new Vector3(w + .35f, .36f, d + .35f), trim);
+            // Low 1970s roof: much flatter than the old wooden school.
+            AddRoof(b, w, d, h, 1.15f, .45f, roof);
+            Cube("Front eave", b, new Vector3(0f,h+.06f,d*.5f+.25f), new Vector3(w+.8f,.12f,.14f), trim, false);
 
-            // Proper pitched roof geometry. V7 had the pitch signs reversed, so the
-            // roof climbed toward the eaves instead of toward the ridge.
-            float angle = 24f;
-            float overhang = .42f;
-            float halfRun = d * .5f + overhang;
-            float rise = Mathf.Tan(angle * Mathf.Deg2Rad) * halfRun;
-            float slopeLength = halfRun / Mathf.Cos(angle * Mathf.Deg2Rad);
-            float centerY = h + rise * .5f;
-            float centerZ = halfRun * .5f;
-
-            var backRoof = Cube("Roof back slope", b,
-                new Vector3(0f, centerY, -centerZ),
-                new Vector3(w + overhang * 2f, .20f, slopeLength), roof, false);
-            backRoof.transform.localRotation = Quaternion.Euler(-angle, 0f, 0f);
-
-            var frontRoof = Cube("Roof front slope", b,
-                new Vector3(0f, centerY, centerZ),
-                new Vector3(w + overhang * 2f, .20f, slopeLength), roof, false);
-            frontRoof.transform.localRotation = Quaternion.Euler(angle, 0f, 0f);
-
-            Cube("Ridge cap", b, new Vector3(0f, h + rise + .03f, 0f),
-                new Vector3(w + overhang * 2f + .04f, .16f, .18f), roof, false);
-            Cube("Front fascia", b, new Vector3(0f, h + .01f, d * .5f + overhang),
-                new Vector3(w + overhang * 2f, .24f, .12f), trim, false);
-            Cube("Back fascia", b, new Vector3(0f, h + .01f, -d * .5f - overhang),
-                new Vector3(w + overhang * 2f, .24f, .12f), trim, false);
-            GableEnds(b, w, h, d, Mathf.Tan(angle * Mathf.Deg2Rad) * d * .5f, wall);
-
-            int count = Mathf.Max(3, Mathf.FloorToInt(w / 4.1f));
-            float step = w / (count + 1);
-            for (int i = 1; i <= count; i++) {
-                float x = -w * .5f + step * i;
-                if (Mathf.Abs(x + w * .18f) < 2.2f) continue;
-                Window(b, x, d * .501f, 180f, trim, glass);
+            // Public municipal material says the main building had several classrooms with separate entrances.
+            float startX = -14.2f;
+            for (int i=0;i<7;i++) {
+                float x = startX + i*4.55f;
+                Window(b, new Vector3(x,1.75f,d*.5f+.02f), 180f, new Vector2(1.65f,1.15f), trim, glass, trim);
+                if (i==1 || i==3 || i==5) {
+                    Door(b, new Vector3(x+1.65f,1.22f,d*.5f+.11f), 180f, .95f,2.15f, trim, glass, wall);
+                    Cube("Small canopy", b, new Vector3(x+1.65f,2.65f,d*.5f+.78f), new Vector3(1.7f,.13f,1.45f), roof, false);
+                    Cube("Concrete step", b, new Vector3(x+1.65f,.12f,d*.5f+.70f), new Vector3(1.7f,.20f,1.05f), concrete);
+                }
             }
 
-            float ex = -w * .18f;
-            Cube("Entrance recess", b, new Vector3(ex, 1.45f, d * .507f), new Vector3(3.4f, 2.9f, .16f), trim, false);
-            Cube("Door glass", b, new Vector3(ex, 1.35f, d * .60f), new Vector3(1.65f, 2.55f, .12f), glass, false);
-            Cube("Door frame L", b, new Vector3(ex - .90f, 1.4f, d * .67f), new Vector3(.14f, 2.8f, .18f), trim, false);
-            Cube("Door frame R", b, new Vector3(ex + .90f, 1.4f, d * .67f), new Vector3(.14f, 2.8f, .18f), trim, false);
-            Cube("Entrance canopy", b, new Vector3(ex, 3.05f, d * .5f + 1.15f), new Vector3(4.2f, .22f, 2.4f), roof, false);
-            Cube("Entrance step", b, new Vector3(ex, .18f, d * .5f + .85f), new Vector3(3.5f, .22f, 1.35f), trim);
+            // More formal main entrance toward the left side.
+            float ex = -10.8f;
+            Cube("Main entrance recess", b, new Vector3(ex,1.40f,d*.5f+.08f), new Vector3(3.9f,2.8f,.16f), trim, false);
+            Door(b, new Vector3(ex-.55f,1.25f,d*.5f+.18f), 180f,1.0f,2.18f,trim,glass,wall);
+            Door(b, new Vector3(ex+.55f,1.25f,d*.5f+.18f), 180f,1.0f,2.18f,trim,glass,wall);
+            Cube("Main canopy", b, new Vector3(ex,3.00f,d*.5f+1.05f), new Vector3(4.8f,.18f,2.25f), roof, false);
+            Cube("Main step", b, new Vector3(ex,.12f,d*.5f+.85f), new Vector3(4.0f,.20f,1.55f), concrete);
         }
 
-        static void Spruce(Transform parent, Vector3 position, float scale, Material bark, Material needles, Material snow) {
-            var tree = new GameObject("Spruce").transform;
+        static void OldWoodSchool(Transform parent, Vector3 center, Material yellow, Material white, Material roof, Material glass, Material concrete) {
+            Transform b = new GameObject("Träskolan - ca 1900").transform;
+            b.SetParent(parent);
+            b.localPosition = center;
+            b.localRotation = Quaternion.Euler(0f, -9f, 0f);
+
+            float w=14.5f, h=6.0f, d=8.6f;
+            Cube("Two storey timber body", b, new Vector3(0f,h*.5f,0f), new Vector3(w,h,d), yellow);
+            Cube("Stone plinth", b, new Vector3(0f,.32f,0f), new Vector3(w+.28f,.64f,d+.28f), concrete);
+            AddRoof(b,w,d,h,3.15f,.55f,roof);
+
+            // White corner boards make the old yellow timber school read instantly.
+            float xEdge=w*.5f+.04f, zEdge=d*.5f+.04f;
+            foreach(float x in new float[]{-xEdge,xEdge}) {
+                Cube("Corner board front", b, new Vector3(x,h*.52f,zEdge), new Vector3(.20f,h*.92f,.10f), white, false);
+                Cube("Corner board back", b, new Vector3(x,h*.52f,-zEdge), new Vector3(.20f,h*.92f,.10f), white, false);
+            }
+            Cube("White floor band", b, new Vector3(0f,3.02f,zEdge), new Vector3(w,.15f,.09f), white, false);
+
+            float[] xs = {-5.0f,-1.7f,1.7f,5.0f};
+            foreach(float x in xs) {
+                Window(b,new Vector3(x,1.75f,zEdge),180f,new Vector2(1.25f,1.45f),white,glass,white);
+                Window(b,new Vector3(x,4.35f,zEdge),180f,new Vector2(1.20f,1.35f),white,glass,white);
+            }
+            Door(b,new Vector3(0f,1.25f,zEdge+.10f),180f,1.15f,2.20f,white,glass,yellow);
+            Cube("Entrance porch roof", b, new Vector3(0f,3.0f,zEdge+1.0f), new Vector3(3.5f,.18f,2.1f), roof, false);
+            Cube("Porch post L", b, new Vector3(-1.45f,1.45f,zEdge+1.6f), new Vector3(.13f,2.8f,.13f), white, false);
+            Cube("Porch post R", b, new Vector3(1.45f,1.45f,zEdge+1.6f), new Vector3(.13f,2.8f,.13f), white, false);
+            Cube("Porch step", b, new Vector3(0f,.15f,zEdge+.92f), new Vector3(2.9f,.22f,1.45f), concrete);
+        }
+
+        static void StoneSchool(Transform parent, Vector3 center, Material masonry, Material trim, Material roof, Material glass, Material concrete) {
+            Transform b = new GameObject("Stenskolan - 1940/50-tal").transform;
+            b.SetParent(parent);
+            b.localPosition = center;
+            b.localRotation = Quaternion.Euler(0f, 7f, 0f);
+
+            float w=17.5f,h=4.2f,d=8.2f;
+            Cube("Masonry body", b, new Vector3(0f,h*.5f,0f), new Vector3(w,h,d), masonry);
+            Cube("Foundation", b, new Vector3(0f,.25f,0f), new Vector3(w+.25f,.50f,d+.25f), concrete);
+            AddRoof(b,w,d,h,2.35f,.48f,roof);
+
+            float[] xs={-6.0f,-3.0f,0f,3.0f,6.0f};
+            foreach(float x in xs)
+                Window(b,new Vector3(x,2.0f,d*.5f+.02f),180f,new Vector2(1.35f,1.55f),trim,glass,trim);
+
+            Door(b,new Vector3(-6.2f,1.25f,d*.5f+.12f),180f,1.05f,2.20f,trim,glass,masonry);
+            Cube("Door canopy",b,new Vector3(-6.2f,2.82f,d*.5f+.75f),new Vector3(2.2f,.16f,1.55f),roof,false);
+        }
+
+        static void ModuleBuilding(Transform parent, Vector3 center, Material wall, Material trim, Material glass) {
+            Transform b = new GameObject("Tillfällig skolmodul").transform;
+            b.SetParent(parent);
+            b.localPosition = center;
+            Cube("Module body",b,new Vector3(0f,1.45f,0f),new Vector3(13f,2.9f,5.2f),wall);
+            Cube("Module roof",b,new Vector3(0f,2.98f,0f),new Vector3(13.4f,.18f,5.6f),trim,false);
+            for(int i=0;i<4;i++) Window(b,new Vector3(-4.6f+i*3.0f,1.55f,2.62f),180f,new Vector2(1.25f,1.05f),trim,glass,trim);
+        }
+
+        static void Spruce(Transform parent, Vector3 pos, float scale, Material bark, Material needles, Material snow) {
+            Transform tree = new GameObject("Spruce").transform;
             tree.SetParent(parent);
-            tree.localPosition = position;
-            Cylinder("Trunk", tree, new Vector3(0f, 1.4f * scale, 0f), new Vector3(.13f * scale, 1.4f * scale, .13f * scale), bark);
-            for (int i = 0; i < 4; i++) {
-                float y = (1.45f + i * .72f) * scale;
-                float r = (1.45f - i * .23f) * scale;
-                Cylinder("Crown", tree, new Vector3(0f, y, 0f), new Vector3(r, .26f * scale, r), needles);
-                Cylinder("Snow cap", tree, new Vector3(0f, y + .19f * scale, 0f), new Vector3(r * .91f, .05f * scale, r * .91f), snow);
+            tree.localPosition = pos;
+            Cylinder("Trunk",tree,new Vector3(0f,1.5f*scale,0f),new Vector3(.13f*scale,1.5f*scale,.13f*scale),bark);
+            for(int i=0;i<4;i++) {
+                float y=(1.55f+i*.72f)*scale;
+                float r=(1.55f-i*.24f)*scale;
+                Cylinder("Crown",tree,new Vector3(0f,y,0f),new Vector3(r,.25f*scale,r),needles);
+                Cylinder("Snow cap",tree,new Vector3(0f,y+.17f*scale,0f),new Vector3(r*.9f,.05f*scale,r*.9f),snow);
             }
-        }
-
-        static void LampPost(Transform parent, Vector3 position, Material metal, Material warm) {
-            var lamp = new GameObject("Lamp post").transform;
-            lamp.SetParent(parent);
-            lamp.localPosition = position;
-            Cylinder("Pole", lamp, new Vector3(0f, 1.8f, 0f), new Vector3(.07f, 1.8f, .07f), metal);
-            Cube("Head", lamp, new Vector3(0f, 3.55f, .10f), new Vector3(.55f, .16f, .34f), metal, false);
-            Cube("Glow", lamp, new Vector3(0f, 3.47f, .12f), new Vector3(.38f, .04f, .22f), warm, false);
         }
 
         static void BuildScene() {
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             scene.name = "RosvikHero";
-            var root = new GameObject("ROSVIK_EXTERIOR_V8").transform;
+            Transform root = new GameObject("ROSVIK_REAL_CAMPUS_V9").transform;
 
-            var snow = Mat("Snow", new Color(.78f, .82f, .83f), .20f);
-            var packedSnow = Mat("Packed snow", new Color(.62f, .67f, .68f), .12f);
-            var asphalt = Mat("Winter asphalt", new Color(.13f, .15f, .16f), .07f);
-            var wall = Mat("School timber", new Color(.47f, .43f, .35f), .14f);
-            var trim = Mat("Dark trim", new Color(.12f, .14f, .14f), .18f);
-            var roof = Mat("Dark metal roof", new Color(.08f, .10f, .11f), .30f);
-            var glass = Mat("Cold window glass", new Color(.18f, .28f, .31f), .42f);
-            var red = Mat("Player coat", new Color(.43f, .12f, .10f), .12f);
-            var skin = Mat("Skin", new Color(.62f, .47f, .36f), .15f);
-            var bark = Mat("Bark", new Color(.17f, .12f, .09f), .08f);
-            var pine = Mat("Pine", new Color(.10f, .19f, .16f), .10f);
-            var warm = Mat("Warm lamp", new Color(1f, .58f, .27f), .35f);
+            Material snow=Mat("Snow",new Color(.79f,.83f,.85f),.18f);
+            Material packed=Mat("Packed snow",new Color(.64f,.68f,.70f),.10f);
+            Material asphalt=Mat("Asphalt",new Color(.13f,.15f,.16f),.06f);
+            Material mainWall=Mat("70s school facade",new Color(.52f,.49f,.41f),.11f);
+            Material yellow=Mat("Old school yellow",new Color(.66f,.54f,.28f),.10f);
+            Material white=Mat("Old white trim",new Color(.82f,.82f,.77f),.14f);
+            Material stone=Mat("Stenskolan masonry",new Color(.57f,.58f,.55f),.11f);
+            Material module=Mat("Module facade",new Color(.42f,.45f,.43f),.10f);
+            Material trim=Mat("Dark trim",new Color(.12f,.14f,.15f),.18f);
+            Material roof=Mat("Dark roof",new Color(.09f,.10f,.11f),.27f);
+            Material glass=Mat("Cold glass",new Color(.18f,.29f,.33f),.40f);
+            Material concrete=Mat("Concrete",new Color(.43f,.45f,.46f),.08f);
+            Material pine=Mat("Pine",new Color(.10f,.19f,.16f),.08f);
+            Material bark=Mat("Bark",new Color(.16f,.12f,.09f),.06f);
+            Material red=Mat("Player coat",new Color(.43f,.12f,.10f),.10f);
+            Material skin=Mat("Skin",new Color(.62f,.47f,.36f),.12f);
 
-            Cube("Snow terrain", root, new Vector3(0f, -.18f, 0f), new Vector3(92f, .35f, 70f), snow);
-            Cube("School road", root, new Vector3(0f, .015f, 18f), new Vector3(70f, .08f, 7.5f), asphalt);
-            Cube("Cleared forecourt", root, new Vector3(-5f, .045f, 10.7f), new Vector3(30f, .06f, 6.5f), packedSnow);
-            Cube("Footpath", root, new Vector3(-8f, .055f, 7.0f), new Vector3(4.0f, .07f, 12f), packedSnow);
+            // Actual Rosvik references used for this pass:
+            // municipal material describes three adjacent school buildings from ca 1900, 1940/50s and the 1970s,
+            // plus later temporary modules. This scene is therefore a campus, not one generic school block.
+            Cube("Snow terrain",root,new Vector3(0f,-.18f,0f),new Vector3(115f,.35f,90f),snow);
+            Cube("Skolgränd road",root,new Vector3(0f,.015f,24f),new Vector3(90f,.08f,7.5f),asphalt);
+            Cube("Main cleared yard",root,new Vector3(0f,.045f,10f),new Vector3(55f,.06f,18f),packed);
+            Cube("Path to old school",root,new Vector3(-17f,.055f,-8f),new Vector3(5f,.07f,28f),packed);
+            Cube("Path to stone school",root,new Vector3(18f,.055f,-7f),new Vector3(5f,.07f,28f),packed);
 
-            GabledBuilding(root, "Rosviks skola - main wing", new Vector3(0f, 0f, -1.0f), new Vector3(31f, 3.6f, 9.2f), wall, trim, roof, glass);
-            GabledBuilding(root, "Rosviks skola - side wing", new Vector3(12.0f, 0f, -8.0f), new Vector3(16f, 3.35f, 7.5f), wall, trim, roof, glass);
+            MainSeventiesSchool(root,new Vector3(0f,0f,1f),mainWall,trim,roof,glass,concrete);
+            OldWoodSchool(root,new Vector3(-20f,0f,-18f),yellow,white,roof,glass,concrete);
+            StoneSchool(root,new Vector3(20f,0f,-17f),stone,trim,roof,glass,concrete);
+            ModuleBuilding(root,new Vector3(30f,0f,6f),module,trim,glass);
 
-            Cube("Link block", root, new Vector3(8.5f, 1.45f, -5.2f), new Vector3(8.5f, 2.9f, 4.1f), wall);
-            Cube("Link roof", root, new Vector3(8.5f, 3.0f, -5.2f), new Vector3(9.0f, .24f, 4.5f), roof, false);
+            // Nearby sport/ice complex is deliberately present as a background landmark,
+            // because public mapping places Norrbotten Stål Arena just southeast of the school.
+            Transform arena=new GameObject("Norrbotten Stål Arena - background landmark").transform;
+            arena.SetParent(root);
+            arena.localPosition=new Vector3(44f,0f,-34f);
+            Cube("Arena hall",arena,new Vector3(0f,3.7f,0f),new Vector3(27f,7.4f,15f),module);
+            Cube("Arena roof",arena,new Vector3(0f,7.55f,0f),new Vector3(28f,.28f,16f),roof,false);
 
-            for (int i = 0; i < 6; i++) {
-                var drift = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                drift.name = "Ploughed snow bank";
+            Vector3[] trees={
+                new Vector3(-40f,0f,-31f),new Vector3(-33f,0f,-34f),new Vector3(-27f,0f,-32f),
+                new Vector3(0f,0f,-38f),new Vector3(9f,0f,-36f),new Vector3(31f,0f,-30f),
+                new Vector3(-43f,0f,4f),new Vector3(43f,0f,13f),new Vector3(-35f,0f,31f),new Vector3(35f,0f,32f)
+            };
+            for(int i=0;i<trees.Length;i++) Spruce(root,trees[i],.9f+(i%3)*.12f,bark,pine,snow);
+
+            // Snow banks at edge of ploughed yard.
+            for(int i=0;i<7;i++) {
+                GameObject drift=GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                drift.name="Ploughed snow bank";
                 drift.transform.SetParent(root);
-                drift.transform.localPosition = new Vector3(-25f + i * 10f, .22f, 14.2f);
-                drift.transform.localScale = new Vector3(4.3f, .55f, 1.15f);
-                drift.GetComponent<Renderer>().sharedMaterial = snow;
+                drift.transform.localPosition=new Vector3(-30f+i*10f,.25f,18f);
+                drift.transform.localScale=new Vector3(4.2f,.55f,1.1f);
+                drift.GetComponent<Renderer>().sharedMaterial=snow;
                 UnityEngine.Object.DestroyImmediate(drift.GetComponent<Collider>());
             }
 
-            Vector3[] trees = {
-                new(-32f,0f,-18f), new(-25f,0f,-20f), new(-18f,0f,-19f),
-                new(24f,0f,-20f), new(31f,0f,-15f), new(35f,0f,-6f),
-                new(-34f,0f,3f), new(34f,0f,7f), new(-29f,0f,25f), new(28f,0f,26f)
-            };
-            for (int i = 0; i < trees.Length; i++) Spruce(root, trees[i], .85f + (i % 3) * .12f, bark, pine, snow);
-
-            LampPost(root, new Vector3(-14f, 0f, 11.5f), trim, warm);
-            LampPost(root, new Vector3(4f, 0f, 11.5f), trim, warm);
-            LampPost(root, new Vector3(19f, 0f, 15.0f), trim, warm);
-
-            var player = new GameObject("PLAYER_PLACEHOLDER");
+            GameObject player=new GameObject("PLAYER_PLACEHOLDER");
             player.transform.SetParent(root);
-            player.transform.localPosition = new Vector3(-8f, .05f, 13.1f);
-            Cube("Coat", player.transform, new Vector3(0f, 1.08f, 0f), new Vector3(.58f, .82f, .38f), red, false);
-            var head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            head.name = "Head";
+            player.transform.localPosition=new Vector3(-10.8f,.05f,11.8f);
+            Cube("Coat",player.transform,new Vector3(0f,1.08f,0f),new Vector3(.58f,.82f,.38f),red,false);
+            GameObject head=GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            head.name="Head";
             head.transform.SetParent(player.transform);
-            head.transform.localPosition = new Vector3(0f, 1.72f, 0f);
-            head.transform.localScale = Vector3.one * .38f;
-            head.GetComponent<Renderer>().sharedMaterial = skin;
+            head.transform.localPosition=new Vector3(0f,1.72f,0f);
+            head.transform.localScale=Vector3.one*.38f;
+            head.GetComponent<Renderer>().sharedMaterial=skin;
             UnityEngine.Object.DestroyImmediate(head.GetComponent<Collider>());
-            Cube("Leg L", player.transform, new Vector3(-.15f, .48f, 0f), new Vector3(.20f, .68f, .24f), trim, false);
-            Cube("Leg R", player.transform, new Vector3(.15f, .48f, 0f), new Vector3(.20f, .68f, .24f), trim, false);
-            var cc = player.AddComponent<CharacterController>();
-            cc.height = 1.9f;
-            cc.radius = .34f;
-            cc.center = new Vector3(0f, .95f, 0f);
-            cc.stepOffset = .25f;
+            Cube("Leg L",player.transform,new Vector3(-.15f,.48f,0f),new Vector3(.20f,.68f,.24f),trim,false);
+            Cube("Leg R",player.transform,new Vector3(.15f,.48f,0f),new Vector3(.20f,.68f,.24f),trim,false);
+            CharacterController cc=player.AddComponent<CharacterController>();
+            cc.height=1.9f; cc.radius=.34f; cc.center=new Vector3(0f,.95f,0f); cc.stepOffset=.25f;
             player.AddComponent<RosvikPlayerController>();
 
-            var cameraGo = new GameObject("Main Camera");
-            cameraGo.tag = "MainCamera";
-            var cam = cameraGo.AddComponent<Camera>();
-            cam.orthographic = true;
-            cam.orthographicSize = 10.5f;
-            cam.nearClipPlane = .1f;
-            cam.farClipPlane = 180f;
-            cam.backgroundColor = new Color(.50f, .62f, .69f);
-            var rig = cameraGo.AddComponent<IsometricCameraRig>();
-            rig.target = player.transform;
-            rig.yaw = 45f;
-            rig.pitch = 46f;
-            rig.orthographicSize = 10.5f;
+            GameObject cameraGo=new GameObject("Main Camera");
+            cameraGo.tag="MainCamera";
+            Camera cam=cameraGo.AddComponent<Camera>();
+            cam.orthographic=true; cam.orthographicSize=12.5f; cam.nearClipPlane=.1f; cam.farClipPlane=220f;
+            cam.backgroundColor=new Color(.50f,.62f,.69f);
+            IsometricCameraRig rig=cameraGo.AddComponent<IsometricCameraRig>();
+            rig.target=player.transform; rig.yaw=45f; rig.pitch=46f; rig.orthographicSize=12.5f;
 
-            var sunGo = new GameObject("Cold winter sun");
-            var sun = sunGo.AddComponent<Light>();
-            sun.type = LightType.Directional;
-            sun.color = new Color(.82f, .88f, 1f);
-            sun.intensity = 1.05f;
-            sun.shadows = LightShadows.Soft;
-            sunGo.transform.rotation = Quaternion.Euler(42f, -28f, 0f);
+            GameObject sunGo=new GameObject("Cold winter sun");
+            Light sun=sunGo.AddComponent<Light>();
+            sun.type=LightType.Directional; sun.color=new Color(.82f,.88f,1f); sun.intensity=1.05f; sun.shadows=LightShadows.Soft;
+            sunGo.transform.rotation=Quaternion.Euler(42f,-28f,0f);
 
-            RenderSettings.ambientMode = AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(.40f, .45f, .48f);
-            RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(.57f, .65f, .69f);
-            RenderSettings.fogDensity = .0045f;
+            RenderSettings.ambientMode=AmbientMode.Flat;
+            RenderSettings.ambientLight=new Color(.40f,.45f,.48f);
+            RenderSettings.fog=true;
+            RenderSettings.fogColor=new Color(.57f,.65f,.69f);
+            RenderSettings.fogDensity=.0038f;
 
-            EditorSceneManager.SaveScene(scene, ScenePath);
+            EditorSceneManager.SaveScene(scene,ScenePath);
             AssetDatabase.SaveAssets();
-            Selection.activeObject = player;
+            Selection.activeObject=player;
         }
     }
 }

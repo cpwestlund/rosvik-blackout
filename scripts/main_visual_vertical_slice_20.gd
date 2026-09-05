@@ -7,6 +7,12 @@ extends "res://scripts/main_reference_art_19c.gd"
 
 var _detail_root20: Node3D
 
+func _sphere19b(radius: float,material: Material,pos: Vector3,parent: Node) -> MeshInstance3D:
+	var node := super._sphere19b(radius,material,pos,parent)
+	if pos.y > 4.2 and pos.z > 5.8:
+		node.visible = false
+	return node
+
 func _ready() -> void:
 	super._ready()
 	_detail_root20 = Node3D.new()

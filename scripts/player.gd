@@ -26,27 +26,13 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	var input_vec: Vector2 = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	var target_dir: Vector3 = Vector3.ZERO
-	var active_camera: Camera3D = get_viewport().get_camera_3d()
-	if input_vec.length() > 0.01:
-		if active_camera != null:
-			var cam_forward: Vector3 = -active_camera.global_transform.basis.z
-			cam_forward.y = 0.0
-			cam_forward = cam_forward.normalized()
-			var cam_right: Vector3 = active_camera.global_transform.basis.x
-			cam_right.y = 0.0
-			cam_right = cam_right.normalized()
-			target_dir = cam_right * input_vec.x + cam_forward * -input_vec.y
-		else:
-			target_dir = Vector3(input_vec.x,0.0,input_vec.y)
-		if target_dir.length() > 0.01:
-			target_dir = target_dir.normalized()
+	var target_dir: Vector3 = _screen_space_move_direction(input_vec)
 
-	# Smooth the requested world direction so reversing or changing WASD axes does
-	# not flip facing back and forth for a few frames.
-	var response: float = 1.0 - exp(-13.0 * delta)
+	# Smooth requested direction just enough to avoid twitch when rapidly changing
+	# keys, while keeping the movement axes locked to the current SCREEN.
+	var response: float = 1.0 - exp(-15.0 * delta)
 	_smoothed_dir = _smoothed_dir.lerp(target_dir,response)
-	if target_dir == Vector3.ZERO and _smoothed_dir.length() < 0.025:
+	if target_dir == Vector3.ZERO and _smoothed_dir.length() < 0.020:
 		_smoothed_dir = Vector3.ZERO
 	elif _smoothed_dir.length() > 1.0:
 		_smoothed_dir = _smoothed_dir.normalized()
@@ -56,8 +42,6 @@ func _physics_process(delta: float) -> void:
 	velocity.x = move_toward(velocity.x, desired_velocity.x, acceleration * delta)
 	velocity.z = move_toward(velocity.z, desired_velocity.z, acceleration * delta)
 
-	# Face actual travel rather than raw input. This removes the visible twitch when
-	# the player is still decelerating from the previous direction.
 	var travel: Vector3 = Vector3(velocity.x,0.0,velocity.z)
 	if travel.length() > 0.20:
 		var target_yaw: float = atan2(travel.x,travel.z)
@@ -67,6 +51,55 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= 18.0 * delta
 	move_and_slide()
 	_animate(delta)
+
+# Exact screen-space movement. Instead of assuming a sign/convention from the
+# Camera3D basis, two points are projected from the screen onto the player's
+# ground plane. Therefore W is always visually UP, S DOWN, A LEFT and D RIGHT,
+# even while the orbit camera is rotating or easing into its new position.
+func _screen_space_move_direction(input_vec: Vector2) -> Vector3:
+	if input_vec.length() <= 0.01:
+		return Vector3.ZERO
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	if cam == null:
+		var fallback := Vector3(input_vec.x,0.0,input_vec.y)
+		return fallback.normalized() if fallback.length() > 0.01 else Vector3.ZERO
+
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var center: Vector2 = viewport_size * 0.5
+	var ground_y: float = global_position.y
+	var center_world: Vector3 = _screen_to_ground(cam,center,ground_y)
+	var up_world: Vector3 = _screen_to_ground(cam,center+Vector2(0.0,-120.0),ground_y)
+	var right_world: Vector3 = _screen_to_ground(cam,center+Vector2(120.0,0.0),ground_y)
+
+	var screen_up: Vector3 = up_world-center_world
+	var screen_right: Vector3 = right_world-center_world
+	screen_up.y = 0.0
+	screen_right.y = 0.0
+	if screen_up.length() < 0.001 or screen_right.length() < 0.001:
+		# Very defensive fallback; normal game pitch never reaches this branch.
+		var cam_forward: Vector3 = -cam.global_transform.basis.z
+		cam_forward.y = 0.0
+		cam_forward = cam_forward.normalized()
+		var cam_right: Vector3 = cam.global_transform.basis.x
+		cam_right.y = 0.0
+		cam_right = cam_right.normalized()
+		screen_up = cam_forward
+		screen_right = cam_right
+	else:
+		screen_up = screen_up.normalized()
+		screen_right = screen_right.normalized()
+
+	# Input.get_vector gives W as y=-1, hence -input_vec.y for screen-up.
+	var dir: Vector3 = screen_right*input_vec.x + screen_up*(-input_vec.y)
+	return dir.normalized() if dir.length() > 0.01 else Vector3.ZERO
+
+func _screen_to_ground(cam: Camera3D, screen_pos: Vector2, ground_y: float) -> Vector3:
+	var origin: Vector3 = cam.project_ray_origin(screen_pos)
+	var ray: Vector3 = cam.project_ray_normal(screen_pos)
+	if absf(ray.y) < 0.0001:
+		return origin + ray*10.0
+	var t: float = (ground_y-origin.y)/ray.y
+	return origin + ray*t
 
 func _animate(delta: float) -> void:
 	var speed: float = Vector2(velocity.x, velocity.z).length()

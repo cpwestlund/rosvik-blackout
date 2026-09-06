@@ -66,7 +66,6 @@ namespace Rosvik.Blackout {
         Color originalColor = Color.white;
         int colorProperty = -1;
 
-        // Doors and cabinets stay interactable after looting so they can still be opened/closed.
         public bool IsAvailable => gameObject.activeInHierarchy && (kind != Kind.Loot || !consumed);
         public bool IsOpen => opened;
 
@@ -175,6 +174,7 @@ namespace Rosvik.Blackout {
         public float flashlightBattery = 0f;
         public float flashlightDrainPerSecond = .7f;
         public string objective = "Sök igenom skolan efter användbara saker";
+        public bool suppressLegacyGui = false;
 
         CharacterController controller;
         Camera cam;
@@ -185,6 +185,8 @@ namespace Rosvik.Blackout {
         float nextScan;
         bool inventoryOpen;
         bool flashlightOn;
+
+        public bool FlashlightOn => flashlightOn;
 
         void Awake() {
             controller = GetComponent<CharacterController>();
@@ -300,6 +302,7 @@ namespace Rosvik.Blackout {
         public void ShowToast(string text, float seconds) { toast = text; toastUntil = Time.time + seconds; }
 
         void OnGUI() {
+            if (suppressLegacyGui) return;
             GUIStyle small = new GUIStyle(GUI.skin.label) { fontSize = 14 };
             small.normal.textColor = new Color(.94f,.92f,.85f);
             GUIStyle prompt = new GUIStyle(GUI.skin.label) { fontSize = 17, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };

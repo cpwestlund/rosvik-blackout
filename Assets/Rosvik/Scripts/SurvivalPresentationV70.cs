@@ -262,7 +262,7 @@ namespace Rosvik.Blackout {
             GUI.Label(new Rect(right.x+14,right.y+38,240,20),"Vind "+survival.wind.ToString("0.0")+" m/s   •   "+(survival.IsOutside(player.transform.position)?"UTOMHUS":"SKYDDAD"),text);
             GUI.Label(new Rect(right.x+14,right.y+62,240,18),"Isolering "+TotalInsulation().ToString("0.0")+"   Vattenskydd "+TotalWaterproof().ToString("0.0"),tiny);
             if (player.HasItem("Ficklampa")) {
-                GUI.Label(new Rect(right.x+14,right.y+91,240,19),"Ficklampa: "+(player.FlashlightOn?"PÅ":"AV"),text);
+                GUI.Label(new Rect(right.x+14,right.y+91,240,19),"Ficklampa: "+((player.flashlight && player.flashlight.enabled)?"PÅ":"AV"),text);
                 GUI.Label(new Rect(right.x+14,right.y+113,240,18),"Batteri "+Mathf.CeilToInt(player.flashlightBattery)+"%   •   F",tiny);
             } else GUI.Label(new Rect(right.x+14,right.y+96,240,19),"Ingen ficklampa",text);
         }

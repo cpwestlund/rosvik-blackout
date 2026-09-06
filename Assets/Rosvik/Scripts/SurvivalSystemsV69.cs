@@ -69,6 +69,7 @@ namespace Rosvik.Blackout {
         public float outsideTemperature = -4f;
         public float wind = 2.5f;
         public float weatherDuration = 75f;
+        public bool suppressLegacyGui = false;
 
         CoziPlayerV57 player;
         bool panelOpen;
@@ -228,7 +229,7 @@ namespace Rosvik.Blackout {
         }
 
         void OnGUI() {
-            if(!player) return;
+            if(suppressLegacyGui || !player) return;
             GUIStyle small=new GUIStyle(GUI.skin.label){fontSize=13}; small.normal.textColor=new Color(.95f,.93f,.86f);
             GUIStyle title=new GUIStyle(GUI.skin.label){fontSize=18,fontStyle=FontStyle.Bold}; title.normal.textColor=Color.white;
             GUIStyle center=new GUIStyle(small){alignment=TextAnchor.MiddleCenter,fontStyle=FontStyle.Bold};

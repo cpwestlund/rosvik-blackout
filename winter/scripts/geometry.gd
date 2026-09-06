@@ -96,7 +96,7 @@ func slab(parent: Node3D, points: PackedVector2Array, height: float, material: M
 	var st: = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for i: int in range(0, indices.size(), 3):
-		for j: int in [2, 1, 0]:
+		for j: int in [0, 1, 2]:
 			var p: = points[indices[i + j]]
 			st.set_normal(Vector3.UP)
 			st.add_vertex(Vector3(p.x, height, p.y))

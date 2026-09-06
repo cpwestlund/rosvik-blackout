@@ -22,3 +22,12 @@ No graphics geometry/material/camera changes in this checkpoint.
 
 Next: a garage with visible contextual objects, then actual item uses and
 survival needs. Catalog entries are not proof of finished object functionality.
+
+## Environment pass — 2026-09-06
+
+User prioritizes recognizable school/sports hall and clean roads before garage.
+Corrected roof triangle winding; distinguished the higher sports hall with
+high windows and an entrance. User says small stand on player-facing long side;
+recorded for future interior work. No claim that invented details match a survey.
+Road banks stop at other roads, are lower/narrower, and wheel tracks are subtler.
+CI exports an overview screenshot for inspection alongside the Windows build.

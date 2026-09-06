@@ -76,6 +76,9 @@ func _ready() -> void :
 	player.position = Vector3(-23.5, 0.1, -22.0)
 	add_child(player)
 	player.step.connect(_footstep)
+	if "--overview" in OS.get_cmdline_user_args():
+		player.position = Vector3(-35, 0.1, 8)
+		zoom = 90.0
 	add_child(camera)
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	camera.size = zoom
@@ -152,15 +155,18 @@ func _build_map() -> void :
 			if tags.highway in ["path", "footway", "cycleway"]: width = 2.0
 			if tags.highway == "service": width = 3.5
 			roads.append({"points": points, "width": width})
-			_road(points, width)
 		elif tags.has("building"):
 			if points[0].is_equal_approx(points[-1]): points.remove_at(points.size() - 1)
 			building_polygons.append(points)
 			_building(feature.id, points, tags)
 
+	roads.append({"points": PackedVector2Array([Vector2(-30, -34), Vector2(-30, 63), Vector2(17, 70)]), "width": 3.0})
+	roads.append({"points": PackedVector2Array([Vector2(-66, 4), Vector2(-30, 4)]), "width": 3.0})
+	for road: Dictionary in roads: _road(road.points, road.width)
+
 func _road(points: PackedVector2Array, width: float) -> void :
 	var roadmat: = g.mat("7c8a90", 0, 0.45)
-	var trackmat: = g.mat("4f616b", 3, 0.45)
+	var trackmat: = g.mat("71858f", 3, 0.25)
 	for i: int in range(points.size() - 1):
 		var a: = Vector3(points[i].x, 0.012, points[i].y)
 		var b: = Vector3(points[i + 1].x, 0.012, points[i + 1].y)
@@ -168,12 +174,30 @@ func _road(points: PackedVector2Array, width: float) -> void :
 		var side: = Vector3( - dir.z, 0, dir.x)
 		var road: = g.box(static_world, (a + b) * 0.5, Vector3(width, 0.025, a.distance_to(b) + 0.1), roadmat)
 		road.rotation.y = atan2(dir.x, dir.z)
-		for offset: float in ([-1.65, -0.65, 0.65, 1.65] if width > 3.0 else []):
+		for offset: float in ([-0.8, 0.8] if width > 3.0 else []):
 			if absf(offset) > width * 0.4: continue
-			var track: = g.box(static_world, (a + b) * 0.5 + side * offset + Vector3.UP * 0.022, Vector3(0.3, 0.012, a.distance_to(b)), trackmat)
+			var track: = g.box(static_world, (a + b) * 0.5 + side * offset + Vector3.UP * 0.022, Vector3(0.18, 0.008, a.distance_to(b)), trackmat)
 			track.rotation.y = road.rotation.y
 		for sign_value: float in [-1.0, 1.0]:
-			_drift(a + side * (width * 0.5 + 0.35) * sign_value, b + side * (width * 0.5 + 0.35) * sign_value, 0.85, 0.2)
+			var bank_a = a + side * (width * 0.5 + 0.35) * sign_value
+			var bank_b = b + side * (width * 0.5 + 0.35) * sign_value
+			var steps = maxi(1, int(ceil(a.distance_to(b) / 0.8)))
+			var run_start = -1
+			for step: int in range(steps + 1):
+				var clear = step < steps and _road_bank_clear(bank_a.lerp(bank_b, (float(step) + 0.5) / steps), points)
+				if clear and run_start < 0: run_start = step
+				if not clear and run_start >= 0:
+					_drift(bank_a.lerp(bank_b, float(run_start) / steps), bank_a.lerp(bank_b, float(step) / steps), 0.48, 0.11)
+					run_start = -1
+
+func _road_bank_clear(position_3d: Vector3, own_path: PackedVector2Array) -> bool:
+	var point = Vector2(position_3d.x, position_3d.z)
+	for road: Dictionary in roads:
+		if road.points == own_path: continue
+		for index: int in range(road.points.size() - 1):
+			var nearest = Geometry2D.get_closest_point_to_segment(point, road.points[index], road.points[index + 1])
+			if point.distance_to(nearest) < road.width * 0.5 + 0.85: return false
+	return true
 
 func _bank(pos: Vector3, size: Vector3, angle: float = 0.0) -> void :
 	var bank: = g.ellipsoid(static_world, pos + Vector3(0, -0.12, 0), size, snow)
@@ -272,17 +296,19 @@ func _building(id: String, points: PackedVector2Array, _tags: Dictionary) -> voi
 
 		if Geometry2D.is_point_in_polygon(Vector2(mid.x + outward.x, mid.z + outward.z), points): outward = - outward
 		var angle: = atan2(dir.x, dir.z)
+		var sports_hall = school and mid.z > -4.5
+		var wall_height = 6.5 if sports_hall else height
 		var wallmat: Material = facade
-		if school and mid.z > -5.0: wallmat = g.mat("396575", 2)
-		var wall: = g.box(root, mid + Vector3.UP * height * 0.5, Vector3(0.32, height, length), wallmat, true)
+		if sports_hall: wallmat = g.mat("396575", 2)
+		var wall: = g.box(root, mid + Vector3.UP * wall_height * 0.5, Vector3(0.32, wall_height, length), wallmat, true)
 		wall.rotation.y = angle
 		var base: = g.box(root, mid + outward * 0.025 + Vector3.UP * 0.52, Vector3(0.36, 1.04, length), brick if school else g.mat("747977"))
 		base.rotation.y = angle
-		var edge: = g.box(root, mid + Vector3.UP * (height + 0.08), Vector3(0.7, 0.2, length + 0.3), metal)
+		var edge: = g.box(root, mid + Vector3.UP * (wall_height + 0.08), Vector3(0.7, 0.2, length + 0.3), metal)
 		edge.rotation.y = angle
-		var snow_edge: = g.box(root, mid + Vector3.UP * (height + 0.24), Vector3(0.68, 0.13, length + 0.3), snow)
+		var snow_edge: = g.box(root, mid + Vector3.UP * (wall_height + 0.24), Vector3(0.68, 0.13, length + 0.3), snow)
 		snow_edge.rotation.y = angle
-		if not arena:
+		if not arena and not sports_hall:
 			for k: int in range(int(length / 3.2)):
 				var p: = a + dir * (1.7 + float(k) * 3.2)
 				if p.distance_to(b) < 1.2: continue
@@ -293,9 +319,20 @@ func _building(id: String, points: PackedVector2Array, _tags: Dictionary) -> voi
 					refuge_windows.append(window)
 					g.lamp(powered_root, p + outward * 1.0 + Vector3.UP * 2.0, 1.2, 5.5)
 				if stone: _window(root, p + outward * 0.21 + Vector3.UP * 5.0, outward, frame, false)
+		if sports_hall and absf(outward.x) > 0.9:
+			for k: int in range(int(length / 4.8)):
+				var p = a + dir * (2.4 + k * 4.8)
+				if p.distance_to(b) < 1.5: continue
+				var ribbon = Node3D.new()
+				root.add_child(ribbon)
+				ribbon.position = p + outward * 0.22 + Vector3.UP * 5.1
+				ribbon.rotation.y = atan2(outward.x, outward.z)
+				g.box(ribbon, Vector3.ZERO, Vector3(3.8, 0.95, 0.10), frame)
+				g.box(ribbon, Vector3(0, 0, 0.06), Vector3(3.6, 0.75, 0.04), glass)
+				for x: float in [-0.6, 0.6]: g.box(ribbon, Vector3(x, 0, 0.095), Vector3(0.05, 0.78, 0.03), frame)
 		_drift(a + outward * 0.25, b + outward * 0.25, 0.55, 0.16)
 
-		g.rod(root, a + outward * 0.3 + Vector3.UP * 0.2, a + outward * 0.3 + Vector3.UP * height, 0.055, metal)
+		g.rod(root, a + outward * 0.3 + Vector3.UP * 0.2, a + outward * 0.3 + Vector3.UP * wall_height, 0.055, metal)
 
 	g.slab(root, points, height + 0.16, snow)
 	if arena:
@@ -305,10 +342,35 @@ func _building(id: String, points: PackedVector2Array, _tags: Dictionary) -> voi
 		_pitched_roof(root, Vector3(-9, 7.45, -113), Vector2(41, 18), 4.2, g.mat("934c3d", 2))
 	elif school:
 		_school_entrance(root)
+		_sports_hall_details(root)
 
 		for p: Vector3 in [Vector3(0, 4.4, -29), Vector3(20, 4.4, -33), Vector3(-3, 4.4, 18)]:
 			g.box(root, p, Vector3(1.1, 0.7, 0.8), metal)
 			g.box(root, p + Vector3.UP * 0.4, Vector3(1.3, 0.1, 1.0), snow)
+
+func _sports_hall_details(root: Node3D) -> void:
+	var hall = PackedVector2Array([Vector2(-19.573, -4.455), Vector2(11.4, -4.397), Vector2(11.314, 57.64), Vector2(-19.657, 57.597)])
+	g.slab(root, hall, 6.66, snow)
+	# Separate the higher gym roof from the lower school/connecting wing.
+	g.box(root, Vector3(-4.1, 5.25, -4.43), Vector3(30.97, 2.5, 0.32), g.mat("396575", 2))
+	for z: float in [7.0, 26.0, 46.0]:
+		g.box(root, Vector3(2.8, 6.95, z), Vector3(1.2, 0.55, 2.0), metal)
+		g.box(root, Vector3(2.8, 7.25, z), Vector3(1.45, 0.12, 2.25), snow)
+	# Gym entrance on the player-facing long side; location is an interpretation.
+	var entry = Node3D.new()
+	root.add_child(entry)
+	entry.position = Vector3(-19.63, 0, 9.5)
+	entry.rotation.y = -PI / 2
+	g.box(entry, Vector3(0, 1.22, 0.25), Vector3(2.4, 2.44, 0.16), metal)
+	for x: float in [-0.57, 0.57]:
+		g.box(entry, Vector3(x, 1.3, 0.35), Vector3(1.08, 2.1, 0.09), g.mat("536c72", 2))
+		g.box(entry, Vector3(x, 1.7, 0.405), Vector3(0.82, 0.6, 0.035), glass)
+		g.rod(entry, Vector3(x * 0.25, 0.95, 0.45), Vector3(x * 0.25, 1.25, 0.45), 0.025, metal)
+	g.box(entry, Vector3(0, 2.65, 0.4), Vector3(3.4, 0.35, 0.12), g.mat("284853"))
+	g.label(entry, "SPORTHALL", Vector3(0, 2.66, 0.48), 30)
+	g.box(entry, Vector3(0, 2.94, 0.75), Vector3(3.6, 0.12, 1.9), metal)
+	g.box(entry, Vector3(0, 3.03, 0.75), Vector3(3.65, 0.08, 1.95), snow)
+	g.box(entry, Vector3(0, 0.035, 0.9), Vector3(3.4, 0.07, 1.8), g.mat("687b85"))
 
 func _window(parent: Node3D, pos: Vector3, normal: Vector3, frame: Material, warm: bool) -> MeshInstance3D:
 	var root: = Node3D.new()
@@ -376,8 +438,8 @@ func _arena_front(parent: Node3D) -> void :
 
 func _yard() -> void :
 
-	_road(PackedVector2Array([Vector2(-30, -34), Vector2(-30, 63), Vector2(17, 70)]), 3.0)
-	_road(PackedVector2Array([Vector2(-66, 4), Vector2(-30, 4)]), 3.0)
+
+
 	for p: Vector3 in [Vector3(-28, 0, -33), Vector3(-28, 0, 19), Vector3(-26, 0, 49)]: _bench(p)
 	for z: float in [-11, 13, 36, 62]:
 		g.rod(static_world, Vector3(-39, 0, z), Vector3(-39, 5.8, z), 0.065, metal)

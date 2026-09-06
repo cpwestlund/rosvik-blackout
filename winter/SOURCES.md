@@ -15,3 +15,9 @@ No municipal photograph is distributed as a game texture.
 Mapped IDs: school 163199458, older school 163199461, arena 163199454,
 Skolgränd 127804778. Arena facade details, emergency props, weather and story
 are artistic interpretation, not a survey or a claim about current conditions.
+
+User correction 2026-09-06: the right-hand/lower wing of the mapped school
+complex is a sports hall, with a small stand on the long side facing the player.
+The model now separates this wing visually. Height, high windows, entrance and
+roof equipment are provisional architectural interpretations, not measured facts.
+The stand is recorded for the interior pass; it is not implemented in this exterior pass.

@@ -179,15 +179,13 @@ namespace Rosvik.Blackout {
         }
 
         void DrawHud(GUIStyle heading,GUIStyle text,GUIStyle tiny,GUIStyle center){
-            // Objective is now a small quiet strip instead of a large card.
             Rect obj=new Rect(14,14,Mathf.Min(410,Screen.width*.36f),48);Panel(obj,new Color(.025f,.032f,.030f,.83f),new Color(.18f,.21f,.19f,.75f));
             GUI.Label(new Rect(obj.x+12,obj.y+6,145,18),"THE DARK QUIET",heading);
             GUI.Label(new Rect(obj.x+12,obj.y+24,obj.width-24,18),player.objective,tiny);
 
-            // Small status cluster in the lower-left. Bars are intentionally thin.
             float sx=16,sy=Screen.height-102,sw=168;
             Panel(new Rect(sx,sy,sw,86),new Color(.025f,.032f,.030f,.78f),new Color(.15f,.18f,.16f,.65f));
-            MiniStat(new Rect(sx+10,sy+9,sw-20,9),"H",survival.health,new Color(.60f,.20f,.18f),tiny); 
+            MiniStat(new Rect(sx+10,sy+9,sw-20,9),"H",survival.health,new Color(.60f,.20f,.18f),tiny);
             MiniStat(new Rect(sx+10,sy+23,sw-20,9),"M",survival.hunger,new Color(.57f,.42f,.17f),tiny);
             MiniStat(new Rect(sx+10,sy+37,sw-20,9),"V",survival.thirst,new Color(.18f,.42f,.63f),tiny);
             MiniStat(new Rect(sx+10,sy+51,sw-20,9),"°",survival.warmth,new Color(.70f,.35f,.15f),tiny);
@@ -251,7 +249,6 @@ namespace Rosvik.Blackout {
             GUI.Label(new Rect(left.x+left.width-190,left.y+15,170,22),kg.ToString("0.0")+" / "+backpackCapacityKg.ToString("0")+" KG",kgStyle);
             Line(new Rect(left.x+16,left.y+49,left.width-32,1),new Color(.22f,.25f,.22f,.9f));
 
-            // Fixed backpack grid: empty cells remain visible, like a real inventory container.
             int cols=6,rowsVisible=5;
             float pad=16,space=8;
             float gridW=left.width-pad*2;
@@ -272,8 +269,8 @@ namespace Rosvik.Blackout {
                 Fill(slot,selected?new Color(.18f,.21f,.18f,.98f):new Color(.075f,.085f,.08f,.98f));
                 Border(slot,selected?new Color(.58f,.60f,.49f,.95f):new Color(.25f,.28f,.25f,.85f),selected?2:1);
                 if(occupied){
-                    var kv=items[i];Texture2D tex=Icon(IconKey(kv.Key));float ic=cell-18;
-                    GUI.DrawTexture(new Rect(slot.x+9,slot.y+8,ic,ic),tex,ScaleMode.ScaleToFit,true);
+                    var kv=items[i];Texture2D tex=Icon(IconKey(kv.Key));float iconSize=cell-18;
+                    GUI.DrawTexture(new Rect(slot.x+9,slot.y+8,iconSize,iconSize),tex,ScaleMode.ScaleToFit,true);
                     if(kv.Value>1){GUIStyle cs=Style(10,FontStyle.Bold,new Color(.92f,.91f,.82f),TextAnchor.LowerRight,false);GUI.Label(new Rect(slot.x+5,slot.y+cell-22,cell-10,17),"x"+kv.Value,cs);}
                     if(IsEquipped(kv.Key)){GUIStyle eq=Style(9,FontStyle.Bold,new Color(.72f,.81f,.65f),TextAnchor.UpperLeft,false);GUI.Label(new Rect(slot.x+4,slot.y+2,cell-8,14),"PÅ",eq);}
                     if(slot.Contains(mp)){hover=kv.Key;}
@@ -288,7 +285,6 @@ namespace Rosvik.Blackout {
             GUI.Label(new Rect(left.x+16,infoY+28,left.width-32,38),"Klicka ett föremål för att välja det. Mat, dryck, vård och kläder används i detaljrutan.",text);
             GUI.Label(new Rect(left.x+16,infoY+73,left.width-32,18),"I / TAB   STÄNG",tiny);
 
-            // Right side deliberately feels like field notes rather than another grid.
             GUI.Label(new Rect(right.x+24,right.y+18,right.width-48,30),"FÄLTANTECKNINGAR",title);
             Line(new Rect(right.x+24,right.y+56,right.width-48,1),new Color(.22f,.25f,.22f,.9f));
 
@@ -300,9 +296,9 @@ namespace Rosvik.Blackout {
             }
 
             Texture2D icon=Icon(IconKey(selectedItem));
-            float ic=Mathf.Min(126,right.width*.18f);
-            GUI.DrawTexture(new Rect(right.x+28,right.y+84,ic,ic),icon,ScaleMode.ScaleToFit,true);
-            float tx=right.x+28+ic+22;
+            float detailIconSize=Mathf.Min(126,right.width*.18f);
+            GUI.DrawTexture(new Rect(right.x+28,right.y+84,detailIconSize,detailIconSize),icon,ScaleMode.ScaleToFit,true);
+            float tx=right.x+28+detailIconSize+22;
             GUI.Label(new Rect(tx,right.y+87,right.xMax-tx-24,27),selectedItem,title);
             GUI.Label(new Rect(tx,right.y+118,right.xMax-tx-24,20),Kind(selectedItem)+"   •   "+ItemWeight(selectedItem).ToString("0.00")+" KG/ST",tiny);
             GUI.Label(new Rect(tx,right.y+148,right.xMax-tx-24,86),Description(selectedItem),text);

@@ -1,5 +1,7 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -41,6 +43,8 @@ namespace Rosvik.Blackout {
         public Kind kind;
         public string displayName = "objektet";
         public string itemName = "";
+        public string[] extraItems = Array.Empty<string>();
+        public int[] extraCounts = Array.Empty<int>();
         public string requiredItem = "";
         public float radius = 1.9f;
         public Transform movingPart;
@@ -53,6 +57,7 @@ namespace Rosvik.Blackout {
         public Renderer highlightRenderer;
         public Color highlightColor = new Color(1f, .73f, .28f, 1f);
         public float animationTime = .22f;
+        public string objectiveAfterUse = "";
 
         bool opened;
         bool consumed;
@@ -61,7 +66,8 @@ namespace Rosvik.Blackout {
         Color originalColor = Color.white;
         int colorProperty = -1;
 
-        public bool IsAvailable => !consumed && gameObject.activeInHierarchy;
+        // Doors and cabinets stay interactable after looting so they can still be opened/closed.
+        public bool IsAvailable => gameObject.activeInHierarchy && (kind != Kind.Loot || !consumed);
         public bool IsOpen => opened;
 
         void Awake() {
@@ -99,17 +105,37 @@ namespace Rosvik.Blackout {
 
             if (kind == Kind.Loot) {
                 consumed = true;
-                if (!string.IsNullOrWhiteSpace(itemName)) player.AddItem(itemName);
-                player.ShowToast(string.IsNullOrWhiteSpace(itemName) ? displayName + " är tom" : "Hittade: " + itemName, 2.2f);
+                string found = GiveLoot(player);
+                player.ShowToast(string.IsNullOrWhiteSpace(found) ? displayName + " är tom" : "Hittade: " + found, 2.5f);
                 SetFocused(false);
                 foreach (Renderer r in GetComponentsInChildren<Renderer>(true)) r.enabled = false;
                 foreach (Collider c in GetComponentsInChildren<Collider>(true)) c.enabled = false;
+                if (!string.IsNullOrWhiteSpace(objectiveAfterUse)) player.SetObjective(objectiveAfterUse);
                 return;
             }
 
             bool next = !opened;
             if (anim != null) StopCoroutine(anim);
             anim = StartCoroutine(Animate(next, player));
+        }
+
+        string GiveLoot(CoziPlayerV57 player) {
+            List<string> found = new List<string>();
+            if (!string.IsNullOrWhiteSpace(itemName)) {
+                player.AddItem(itemName, 1);
+                found.Add(itemName);
+            }
+            if (extraItems != null) {
+                for (int i = 0; i < extraItems.Length; i++) {
+                    string item = extraItems[i];
+                    if (string.IsNullOrWhiteSpace(item)) continue;
+                    int count = 1;
+                    if (extraCounts != null && i < extraCounts.Length) count = Mathf.Max(1, extraCounts[i]);
+                    player.AddItem(item, count);
+                    found.Add(count > 1 ? item + " x" + count : item);
+                }
+            }
+            return string.Join(", ", found);
         }
 
         IEnumerator Animate(bool targetOpen, CoziPlayerV57 player) {
@@ -132,10 +158,10 @@ namespace Rosvik.Blackout {
 
             if (opened && kind == Kind.Cabinet && !consumed) {
                 consumed = true;
-                if (!string.IsNullOrWhiteSpace(itemName)) {
-                    player.AddItem(itemName);
-                    player.ShowToast(displayName + " — " + itemName, 2.3f);
-                }
+                string found = GiveLoot(player);
+                if (!string.IsNullOrWhiteSpace(found)) player.ShowToast(displayName + " — " + found, 2.8f);
+                else player.ShowToast(displayName + " är tom", 1.8f);
+                if (!string.IsNullOrWhiteSpace(objectiveAfterUse)) player.SetObjective(objectiveAfterUse);
             }
         }
     }
@@ -145,18 +171,25 @@ namespace Rosvik.Blackout {
         public float sprintSpeed = 5.8f;
         public float turnSharpness = 14f;
         public float interactionScanRadius = 2.4f;
+        public Light flashlight;
+        public float flashlightBattery = 0f;
+        public float flashlightDrainPerSecond = .7f;
+        public string objective = "Sök igenom skolan efter användbara saker";
 
         CharacterController controller;
         Camera cam;
         CozyInteractableV57 focused;
-        readonly List<string> inventory = new List<string>();
+        readonly Dictionary<string,int> inventory = new Dictionary<string,int>(StringComparer.OrdinalIgnoreCase);
         string toast = "";
         float toastUntil;
         float nextScan;
+        bool inventoryOpen;
+        bool flashlightOn;
 
         void Awake() {
             controller = GetComponent<CharacterController>();
             cam = Camera.main;
+            if (flashlight) flashlight.enabled = false;
         }
 
         void Update() {
@@ -164,11 +197,16 @@ namespace Rosvik.Blackout {
             Keyboard kb = Keyboard.current;
             if (kb == null) return;
 
+            if (kb.iKey.wasPressedThisFrame || kb.tabKey.wasPressedThisFrame) inventoryOpen = !inventoryOpen;
+            if (kb.fKey.wasPressedThisFrame) ToggleFlashlight();
+
             Vector2 raw = Vector2.zero;
-            if (kb.wKey.isPressed) raw.y += 1f;
-            if (kb.sKey.isPressed) raw.y -= 1f;
-            if (kb.dKey.isPressed) raw.x += 1f;
-            if (kb.aKey.isPressed) raw.x -= 1f;
+            if (!inventoryOpen) {
+                if (kb.wKey.isPressed) raw.y += 1f;
+                if (kb.sKey.isPressed) raw.y -= 1f;
+                if (kb.dKey.isPressed) raw.x += 1f;
+                if (kb.aKey.isPressed) raw.x -= 1f;
+            }
             raw = Vector2.ClampMagnitude(raw, 1f);
 
             Vector3 forward = cam ? cam.transform.forward : Vector3.forward;
@@ -189,11 +227,36 @@ namespace Rosvik.Blackout {
                 transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, 1f - Mathf.Exp(-turnSharpness * Time.deltaTime));
             }
 
+            if (flashlightOn) {
+                flashlightBattery = Mathf.Max(0f, flashlightBattery - flashlightDrainPerSecond * Time.deltaTime);
+                if (flashlightBattery <= 0f) {
+                    flashlightOn = false;
+                    if (flashlight) flashlight.enabled = false;
+                    ShowToast("Ficklampans batteri tog slut", 2.4f);
+                }
+            }
+
             if (Time.time >= nextScan) {
                 nextScan = Time.time + .08f;
                 Scan();
             }
-            if (focused && kb.eKey.wasPressedThisFrame) focused.Interact(this);
+            if (!inventoryOpen && focused && kb.eKey.wasPressedThisFrame) focused.Interact(this);
+        }
+
+        void ToggleFlashlight() {
+            if (!HasItem("Ficklampa")) { ShowToast("Du har ingen ficklampa", 1.8f); return; }
+            if (flashlightBattery <= 0f) {
+                if (CountItem("Batterier") > 0) {
+                    ConsumeItem("Batterier", 1);
+                    flashlightBattery = 100f;
+                    ShowToast("Bytte batterier i ficklampan", 2f);
+                } else {
+                    ShowToast("Ficklampan behöver batterier", 2f);
+                    return;
+                }
+            }
+            flashlightOn = !flashlightOn;
+            if (flashlight) flashlight.enabled = flashlightOn;
         }
 
         void Scan() {
@@ -214,10 +277,26 @@ namespace Rosvik.Blackout {
             if (focused) focused.SetFocused(true);
         }
 
-        public void AddItem(string item) {
-            if (!string.IsNullOrWhiteSpace(item) && !inventory.Contains(item)) inventory.Add(item);
+        public void AddItem(string item) { AddItem(item, 1); }
+        public void AddItem(string item, int count) {
+            if (string.IsNullOrWhiteSpace(item) || count <= 0) return;
+            if (!inventory.ContainsKey(item)) inventory[item] = 0;
+            inventory[item] += count;
+            if (item.Equals("Ficklampa", StringComparison.OrdinalIgnoreCase) && flashlightBattery <= 0f) flashlightBattery = 45f;
         }
-        public bool HasItem(string item) => string.IsNullOrWhiteSpace(item) || inventory.Contains(item);
+        public int CountItem(string item) {
+            if (string.IsNullOrWhiteSpace(item)) return 0;
+            return inventory.TryGetValue(item, out int n) ? n : 0;
+        }
+        public bool HasItem(string item) => string.IsNullOrWhiteSpace(item) || CountItem(item) > 0;
+        public bool ConsumeItem(string item, int count) {
+            if (CountItem(item) < count) return false;
+            inventory[item] -= count;
+            if (inventory[item] <= 0) inventory.Remove(item);
+            return true;
+        }
+        public IReadOnlyDictionary<string,int> Inventory => inventory;
+        public void SetObjective(string text) { if (!string.IsNullOrWhiteSpace(text)) objective = text; }
         public void ShowToast(string text, float seconds) { toast = text; toastUntil = Time.time + seconds; }
 
         void OnGUI() {
@@ -225,18 +304,46 @@ namespace Rosvik.Blackout {
             small.normal.textColor = new Color(.94f,.92f,.85f);
             GUIStyle prompt = new GUIStyle(GUI.skin.label) { fontSize = 17, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
             prompt.normal.textColor = Color.white;
+            GUIStyle title = new GUIStyle(prompt) { fontSize = 19 };
+            GUIStyle item = new GUIStyle(small) { fontSize = 15 };
 
-            GUI.Box(new Rect(18,18,255,54), "");
-            GUI.Label(new Rect(31,27,230,20), "STRÖMAVBROTT", prompt);
-            GUI.Label(new Rect(31,49,230,18), "WASD  •  Shift  •  E", small);
+            GUI.Box(new Rect(18,18,330,86), "");
+            GUI.Label(new Rect(31,27,300,22), "STRÖMAVBROTT", title);
+            GUI.Label(new Rect(31,51,300,18), "WASD • Shift • E • I inventarie • F ficklampa", small);
+            GUI.Label(new Rect(31,72,300,22), "Mål: " + objective, small);
 
-            if (focused) {
-                GUI.Box(new Rect(Screen.width*.5f-185f, Screen.height-76f, 370f, 42f), "");
-                GUI.Label(new Rect(Screen.width*.5f-178f, Screen.height-74f, 356f, 38f), "E  " + focused.Prompt(this), prompt);
+            if (flashlight && HasItem("Ficklampa")) {
+                GUI.Box(new Rect(Screen.width - 190, 18, 172, 48), "");
+                GUI.Label(new Rect(Screen.width - 180, 27, 150, 18), flashlightOn ? "Ficklampa: PÅ" : "Ficklampa: AV", small);
+                GUI.Label(new Rect(Screen.width - 180, 45, 150, 18), "Batteri " + Mathf.CeilToInt(flashlightBattery) + "%", small);
+            }
+
+            if (inventoryOpen) {
+                float w = 430f, h = 390f;
+                Rect panel = new Rect(Screen.width*.5f-w*.5f, Screen.height*.5f-h*.5f, w, h);
+                GUI.Box(panel, "");
+                GUI.Label(new Rect(panel.x+20,panel.y+16,w-40,28), "INVENTARIE", title);
+                GUI.Label(new Rect(panel.x+20,panel.y+46,w-40,20), "I / Tab stänger", small);
+                int i = 0;
+                foreach (var kv in inventory.OrderBy(x => x.Key)) {
+                    int col = i % 2;
+                    int row = i / 2;
+                    Rect slot = new Rect(panel.x+20+col*195, panel.y+82+row*48, 180, 38);
+                    GUI.Box(slot, "");
+                    GUI.Label(new Rect(slot.x+10,slot.y+9,160,20), kv.Key + (kv.Value > 1 ? "  x" + kv.Value : ""), item);
+                    i++;
+                    if (row >= 5) break;
+                }
+                if (inventory.Count == 0) GUI.Label(new Rect(panel.x+20,panel.y+90,w-40,24), "Tomt.", item);
+            }
+
+            if (!inventoryOpen && focused) {
+                GUI.Box(new Rect(Screen.width*.5f-205f, Screen.height-76f, 410f, 42f), "");
+                GUI.Label(new Rect(Screen.width*.5f-198f, Screen.height-74f, 396f, 38f), "E  " + focused.Prompt(this), prompt);
             }
             if (Time.time < toastUntil) {
-                GUI.Box(new Rect(Screen.width*.5f-210f, 20f, 420f, 42f), "");
-                GUI.Label(new Rect(Screen.width*.5f-202f, 22f, 404f, 38f), toast, prompt);
+                GUI.Box(new Rect(Screen.width*.5f-245f, 20f, 490f, 42f), "");
+                GUI.Label(new Rect(Screen.width*.5f-237f, 22f, 474f, 38f), toast, prompt);
             }
         }
     }

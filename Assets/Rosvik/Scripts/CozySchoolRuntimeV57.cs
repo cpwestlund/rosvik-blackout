@@ -175,6 +175,7 @@ namespace Rosvik.Blackout {
         public float flashlightDrainPerSecond = .7f;
         public string objective = "Sök igenom skolan efter användbara saker";
         public bool suppressLegacyGui = false;
+        public bool externalUiBlocked = false;
 
         CharacterController controller;
         Camera cam;
@@ -199,11 +200,11 @@ namespace Rosvik.Blackout {
             Keyboard kb = Keyboard.current;
             if (kb == null) return;
 
-            if (kb.iKey.wasPressedThisFrame || kb.tabKey.wasPressedThisFrame) inventoryOpen = !inventoryOpen;
-            if (kb.fKey.wasPressedThisFrame) ToggleFlashlight();
+            if (!externalUiBlocked && (kb.iKey.wasPressedThisFrame || kb.tabKey.wasPressedThisFrame)) inventoryOpen = !inventoryOpen;
+            if (!externalUiBlocked && kb.fKey.wasPressedThisFrame) ToggleFlashlight();
 
             Vector2 raw = Vector2.zero;
-            if (!inventoryOpen) {
+            if (!inventoryOpen && !externalUiBlocked) {
                 if (kb.wKey.isPressed) raw.y += 1f;
                 if (kb.sKey.isPressed) raw.y -= 1f;
                 if (kb.dKey.isPressed) raw.x += 1f;
@@ -242,7 +243,7 @@ namespace Rosvik.Blackout {
                 nextScan = Time.time + .08f;
                 Scan();
             }
-            if (!inventoryOpen && focused && kb.eKey.wasPressedThisFrame) focused.Interact(this);
+            if (!externalUiBlocked && !inventoryOpen && focused && kb.eKey.wasPressedThisFrame) focused.Interact(this);
         }
 
         void ToggleFlashlight() {

@@ -23,7 +23,7 @@ Välj ett föremål för en större bild. Bänkar/cykelställ är flyttade och v
 Tidigare miljöpass: takytor syns nu uppifrån, sporthallen skiljer sig från skolan och
 snövallar fortsätter inte genom korsande vägar. Hallens interiör/läktare återstår.
 
-56 föremålstyper finns i katalogen; 18 typer är placerade i de två förråden.
+56 föremålstyper finns i katalogen; 18 typer är placerade i fem förråd.
 Föremålen kan ännu samlas och lagras. Förbrukning, reparation, garage,
 full överlevnad och kampanj ingår inte i denna version.
 Batteriet för första uppdraget bärs separat som tidigare.
@@ -41,6 +41,7 @@ Det lilla röda huset på andra sidan Skolgränd, snett nordväst om skolentrén
 är nu möjligt att gå in i. Följ gången från vägen fram till ytterdörren.
 Tryck E för att öppna/stänga och gå genom dörren med WASD.
 Taket och skymmande väggar döljs när du är inne. Kameran går närmare.
-Hall, kök och vardagsrum är grundmöblerade; sökbara lådor och finare detaljer
-kommer i nästa pass. Husets plats/vridning kommer från kartan, insidan är påhittad.
+Sök köksskåpet, hallbyrån och verktygslådan med I när du står nära.
+Mat, vardagssaker och verktyg har egna bilder; tömda förråd förblir tömda.
+Gardiner, kuddar, en filt, porslin och böcker gör huset mer ombonat. Husets plats/vridning kommer från kartan, insidan är påhittad.
 Din position sparas även inomhus. Du behöver inte börja om din tidigare omgång.

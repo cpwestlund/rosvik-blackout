@@ -57,3 +57,11 @@ collisions stay active; wind is quieter, exterior snow/footprints hidden indoors
 Position and door state save/load. House test walks from school, opens the door,
 visits rooms, roundtrips save, and walks outside. No searchable house containers
 yet: those and finer cozy details belong to pass 2 after discussion with user.
+
+## Searchable first house
+Three contextual containers: kitchen, hallway dresser and living-room tool box.
+Reuses existing pictured item types. Added curtains, cushions, throw, crockery,
+books and boots, all authored atmosphere rather than a reconstruction of a private home.
+Loot schema 2 migrates legacy two-container saves once and preserves empty storage.
+Automated house-loot route exercises all three UI transfers and save/reload.
+Keep subsequent work bounded and discuss the next pass with the user first.

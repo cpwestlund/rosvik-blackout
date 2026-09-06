@@ -107,6 +107,7 @@ func _ready() -> void :
 	if "--walk-test" in OS.get_cmdline_user_args(): call_deferred("_walk_test")
 	if "--inventory-test" in OS.get_cmdline_user_args(): call_deferred("_inventory_test")
 	if "--house-test" in OS.get_cmdline_user_args(): call_deferred("_house_test")
+	if "--house-loot-test" in OS.get_cmdline_user_args(): call_deferred("_house_loot_test")
 
 func _environment() -> void :
 	var env: = Environment.new()
@@ -766,7 +767,8 @@ func _interaction(delta: float) -> void :
 				_save_progress()
 		return
 	if house.inside:
-		hint.text = "Bostadshuset · hall, kök och vardagsrum · sökbart innehåll kommer senare"
+		var storage: String = house.nearest_storage(player.position)
+		hint.text = "I  ·  Sök " + house.STORAGE[storage].title.to_lower() if storage != "" else "Bostadshuset · gå nära ett köksskåp, hallbyrån eller verktygslådan"
 		progress.visible = false
 		player.working = false
 		return
@@ -973,6 +975,8 @@ func _setup_inventory() -> void:
 	get_tree().auto_accept_quit = false
 
 func _nearest_container() -> String:
+	var home_storage: String = house.nearest_storage(player.position)
+	if home_storage != "": return home_storage
 	if player.position.distance_to(BATTERY_POS) < 3.0: return "van"
 	if player.position.distance_to(REFUGE_POS) < 3.0: return "refuge"
 	return ""
@@ -981,6 +985,7 @@ func _toggle_inventory() -> void:
 	if paused and not inventory.visible: return
 	if inventory.visible:
 		inventory.hide()
+		house.set_searching("")
 		paused = false
 		player.paused = false
 	else:
@@ -989,7 +994,10 @@ func _toggle_inventory() -> void:
 		player.paused = true
 		player.working = false
 		hold_time = 0.0
-		inventory.open_box(loot, id, "SERVICEBILENS FÖRVARING" if id == "van" else "FÖRRÅD VID VÄRMEPUNKTEN")
+		var title = "SERVICEBILENS FÖRVARING" if id == "van" else "FÖRRÅD VID VÄRMEPUNKTEN"
+		if house.STORAGE.has(id): title = house.STORAGE[id].title
+		house.set_searching(id)
+		inventory.open_box(loot, id, title)
 
 func _is_test() -> bool:
 	for arg: String in OS.get_cmdline_user_args():
@@ -1081,4 +1089,41 @@ func _house_test() -> void:
 	assert(not house.update_view(player.position) and house.roof.visible)
 	for suffix: String in ["", ".bak", ".tmp"]: DirAccess.remove_absolute(ProjectSettings.globalize_path(path+suffix))
 	print("WINTER_HOUSE_OK walk_from_school=true door=true rooms=true save_inside=true exit=true")
+	get_tree().quit()
+
+func _house_loot_test() -> void:
+	house.set_open(true)
+	player.position = house.to_global(Vector3(2.6,0.1,3.0))
+	assert(house.nearest_storage(house.to_global(Vector3(5.5,0,5.75))) == "")
+	assert(house.nearest_storage(house.to_global(Vector3(0.5,0,5.75))) == "")
+	var routes = [
+		[Vector3(2.8,0,5.2)],
+		[Vector3(2.6,0,3.0),Vector3(-0.2,0,3.0),Vector3(-0.2,0,0.0),Vector3(1.8,0,-1.0),Vector3(2.2,0,-2.8)],
+		[Vector3(1.8,0,-1.0),Vector3(-0.2,0,0.0),Vector3(-0.2,0,3.0),Vector3(-0.2,0,5.3),Vector3(-1.7,0,5.4)]]
+	var ids = ["house_drawer", "house_kitchen", "house_tools"]
+	for i: int in range(ids.size()):
+		for point: Vector3 in routes[i]:
+			if not await _walk_to(house.to_global(point),0.25): return
+		assert(_nearest_container() == ids[i])
+		_toggle_inventory()
+		assert(inventory.visible and inventory.container_id == ids[i])
+		assert(inventory.box_label.text == house.STORAGE[ids[i]].title)
+		if ids[i] == "house_tools": assert(house.tool_lid.rotation.x < -1.0)
+		var transfers = 0
+		while not loot.containers[ids[i]].is_empty():
+			inventory.box_list.select(0)
+			inventory._transfer(true)
+			transfers += 1
+			assert(transfers < 30, "Transfer failed or capacity exceeded")
+		_toggle_inventory()
+		assert(house.tool_lid.rotation.x == 0.0)
+	var snapshot = loot.snapshot()
+	var path = "user://winter_house_loot_automated_test.json"
+	_save_progress(path)
+	loot.reset()
+	_restore_save(path)
+	assert(JSON.parse_string(JSON.stringify(loot.snapshot())) == JSON.parse_string(JSON.stringify(snapshot)), "House loot differs after reload")
+	for id: String in ids: assert(loot.containers[id].is_empty())
+	for suffix: String in ["", ".bak", ".tmp"]: DirAccess.remove_absolute(ProjectSettings.globalize_path(path+suffix))
+	print("WINTER_HOUSE_LOOT_OK walk_to_storage=true ui_transfers=true room_range=true empty_stays_empty=true")
 	get_tree().quit()

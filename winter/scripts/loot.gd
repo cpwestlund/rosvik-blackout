@@ -17,7 +17,10 @@ func reset() -> void:
 	pack = []
 	containers = {
 		"van": [stack("work_gloves", 1, 74), stack("duct_tape", 2, 90), stack("screwdriver", 1, 67), stack("pliers", 1, 80), stack("usb_charger", 1, 43), stack("usb_cable", 2, 65), stack("water", 2, 100), stack("crispbread", 1, 100), stack("jumper_cables", 1, 70), stack("headlamp", 1, 85), stack("aa_battery", 4, 62), stack("tow_rope", 1, 72), stack("oil", 1, 80), stack("socket_set", 1, 74)],
-		"refuge": [stack("blanket", 2, 80), stack("matches", 2, 90), stack("thermos", 1, 78), stack("first_aid", 1, 91)]
+		"refuge": [stack("blanket", 2, 80), stack("matches", 2, 90), stack("thermos", 1, 78), stack("first_aid", 1, 91)],
+		"house_kitchen": [stack("crispbread", 2, 100), stack("water", 2, 100), stack("matches", 1, 90), stack("thermos", 1, 71)],
+		"house_drawer": [stack("usb_charger", 1, 58), stack("usb_cable", 1, 72), stack("aa_battery", 3, 64), stack("first_aid", 1, 86), stack("blanket", 1, 79)],
+		"house_tools": [stack("screwdriver", 1, 68), stack("pliers", 1, 76), stack("duct_tape", 1, 81), stack("work_gloves", 1, 59)]
 	}
 
 func stack(id: String, quantity: int, condition: int) -> Dictionary:
@@ -53,7 +56,7 @@ func transfer(container: String, index: int, take: bool) -> String:
 	return ""
 
 func snapshot() -> Dictionary:
-	return {"pack": pack.duplicate(true), "containers": containers.duplicate(true)}
+	return {"schema": 2, "pack": pack.duplicate(true), "containers": containers.duplicate(true)}
 
 func valid_stack_list(value: Variant) -> bool:
 	if not value is Array: return false
@@ -70,13 +73,22 @@ func valid_stack_list(value: Variant) -> bool:
 func restore(data: Dictionary) -> bool:
 	if not valid_stack_list(data.get("pack")): return false
 	var boxes = data.get("containers")
-	if not boxes is Dictionary or boxes.size() != containers.size(): return false
-	for key: String in containers:
+	if not boxes is Dictionary: return false
+	var legacy = not data.has("schema")
+	var required: Array = ["van", "refuge"] if legacy else containers.keys()
+	if not legacy and data.schema != 2: return false
+	if boxes.size() != required.size(): return false
+	for key: String in required:
 		if not boxes.has(key) or not valid_stack_list(boxes[key]): return false
 	for item: Dictionary in data.pack:
 		if not catalog[item.id].portable: return false
 	var load = totals(data.pack)
 	if load.x > MAX_KG + 0.001 or load.y > MAX_L + 0.001: return false
 	pack = data.pack.duplicate(true)
-	containers = boxes.duplicate(true)
+	if legacy:
+		# Initialize only genuinely new locations. Never refill empty saved containers.
+		var defaults = get_script().new()
+		containers = defaults.containers.duplicate(true)
+		for key: String in boxes: containers[key] = boxes[key].duplicate(true)
+	else: containers = boxes.duplicate(true)
 	return true

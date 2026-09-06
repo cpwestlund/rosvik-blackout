@@ -46,6 +46,12 @@ jobs:
           /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --fixed-fps 60 --quit-after 24000 -- --house-test 2>&1 | tee /tmp/house.log
           grep -q WINTER_HOUSE_OK /tmp/house.log
           ! grep -E 'SCRIPT ERROR|^ERROR:' /tmp/house.log
+      - name: Validate searchable house
+        run: |
+          set -euo pipefail
+          /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --fixed-fps 60 --quit-after 24000 -- --house-loot-test 2>&1 | tee /tmp/house-loot.log
+          grep -q WINTER_HOUSE_LOOT_OK /tmp/house-loot.log
+          ! grep -E 'SCRIPT ERROR|^ERROR:' /tmp/house-loot.log
       - name: Capture environment overview
         run: |
           sudo apt-get update -qq
@@ -77,5 +83,5 @@ jobs:
           cp winter/STARTA_KOMPATIBILITET.cmd build/
       - uses: actions/upload-artifact@v4
         with:
-          name: ROSVIK_BLACKOUT_FIRST_HOUSE
+          name: ROSVIK_BLACKOUT_HOUSE_LOOT
           path: build/

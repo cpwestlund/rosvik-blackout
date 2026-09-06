@@ -31,3 +31,6 @@ high windows and an entrance. User says small stand on player-facing long side;
 recorded for future interior work. No claim that invented details match a survey.
 Road banks stop at other roads, are lower/narrower, and wheel tracks are subtler.
 CI exports an overview screenshot for inspection alongside the Windows build.
+
+## School grounds pass
+User approved grounds before loot artwork. Added courtyard/aprons/parking, planted islands, tree groups, Rosvalla field and contextual schoolyard props. Kept mapped Skolgränd; curved the authored pedestrian approaches. Reused existing procedural assets to preserve style and avoid unrelated asset setup. Loot artwork is next: start with 18 placed types, then all 56 catalog entries. Each item needs its own recognizable image.

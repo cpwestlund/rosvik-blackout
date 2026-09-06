@@ -8,6 +8,7 @@ var inventory = InventoryUI.new()
 var save_ready = false
 var autosave_clock = 0.0
 
+const Grounds = preload("res://winter/scripts/school_grounds.gd")
 const Geometry = preload("res://winter/scripts/geometry.gd")
 const Player = preload("res://winter/scripts/player.gd")
 const Soundscape = preload("res://winter/scripts/soundscape.gd")
@@ -66,6 +67,7 @@ func _ready() -> void :
 	_environment()
 	_terrain()
 	_build_map()
+	Grounds.build(self)
 	_yard()
 	_refuge_details()
 	_generator()
@@ -160,8 +162,8 @@ func _build_map() -> void :
 			building_polygons.append(points)
 			_building(feature.id, points, tags)
 
-	roads.append({"points": PackedVector2Array([Vector2(-30, -34), Vector2(-30, 63), Vector2(17, 70)]), "width": 3.0})
-	roads.append({"points": PackedVector2Array([Vector2(-66, 4), Vector2(-30, 4)]), "width": 3.0})
+	roads.append({"points": PackedVector2Array([Vector2(-28,-41),Vector2(-27,-20),Vector2(-29,0),Vector2(-31,27),Vector2(-30,55),Vector2(-26,65),Vector2(7,70),Vector2(20,70)]), "width": 3.0})
+	roads.append({"points": PackedVector2Array([Vector2(-67,10),Vector2(-53,14),Vector2(-40,10),Vector2(-30,10),Vector2(-21,9.5)]), "width": 3.0})
 	for road: Dictionary in roads: _road(road.points, road.width)
 
 func _road(points: PackedVector2Array, width: float) -> void :
@@ -452,8 +454,8 @@ func _yard() -> void :
 		g.rod(static_world, Vector3(x, 0.75, -36), Vector3(x, 0.75, -35.2), 0.025, metal)
 		g.rod(static_world, Vector3(x, 0.75, -35.2), Vector3(x, 0, -35.2), 0.025, metal)
 	_car(Vector3(7, 0, 76), 0.15, true)
-	_car(Vector3(-49, 0, 48), 0.22, false)
-	_car(Vector3(-52, 0, -49), -0.1, false)
+
+
 	for x: float in [-49, -46]:
 		g.box(static_world, Vector3(x, 0.65, -19), Vector3(0.65, 1.3, 0.72), g.mat("344f48"), true)
 		g.box(static_world, Vector3(x, 1.34, -19), Vector3(0.73, 0.09, 0.8), snow)

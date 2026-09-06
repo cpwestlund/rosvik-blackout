@@ -21,3 +21,5 @@ complex is a sports hall, with a small stand on the long side facing the player.
 The model now separates this wing visually. Height, high windows, entrance and
 roof equipment are provisional architectural interpretations, not measured facts.
 The stand is recorded for the interior pass; it is not implemented in this exterior pass.
+
+School grounds pass: the user-provided Google Maps overview is used as a visual placement reference only; no image pixels are distributed. Existing OSM streets are retained. Snow-covered courtyards, parking aprons, islands, tree groups and Rosvalla field are interpreted in the existing coordinate system. Parking counts, play equipment and individual tree positions are approximate.

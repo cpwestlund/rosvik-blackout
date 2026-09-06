@@ -18,10 +18,16 @@ namespace Rosvik.Blackout {
 
         public bool IsOpen => opened;
         public bool IsAnimating => animating;
+        public Vector3 InteractionPoint => hinge ? hinge.position : transform.position;
 
         void Awake() {
             Resolve();
             if (hinge) opened = Quaternion.Angle(hinge.localRotation, Quaternion.Euler(closedEuler)) > 18f;
+            SetLeafCollision(!opened);
+        }
+
+        void OnEnable() {
+            Resolve();
             SetLeafCollision(!opened);
         }
 
@@ -31,7 +37,9 @@ namespace Rosvik.Blackout {
         }
 
         public void Toggle() {
-            if (animating || !hinge) return;
+            if (animating) return;
+            if (!hinge) Resolve();
+            if (!hinge) return;
             StartCoroutine(Animate(!opened));
         }
 
@@ -54,22 +62,26 @@ namespace Rosvik.Blackout {
         }
 
         void SetLeafCollision(bool value) {
+            if (!hinge) Resolve();
             if (leafColliders == null || leafColliders.Length == 0) Resolve();
             foreach (Collider c in leafColliders) if (c) c.enabled = value;
         }
     }
 
-    [DefaultExecutionOrder(-3900)]
+    [DefaultExecutionOrder(-4100)]
     public sealed class HouseInteriorDoorNetworkV77 : MonoBehaviour {
-        public float interactionDistance = 2.25f;
+        public float interactionDistance = 2.85f;
         CoziPlayerV57 player;
+        SurvivalLootTransferV74 lootTransfer;
         HouseInteriorDoorV77 focused;
         readonly List<HouseInteriorDoorV77> doors = new List<HouseInteriorDoorV77>();
         float nextRefresh;
+        bool ownsBlock;
 
         void Awake() {
             player = GetComponent<CoziPlayerV57>();
             if (!player) player = FindFirstObjectByType<CoziPlayerV57>();
+            lootTransfer = GetComponent<SurvivalLootTransferV74>();
             Refresh();
         }
 
@@ -78,25 +90,54 @@ namespace Rosvik.Blackout {
             doors.AddRange(FindObjectsByType<HouseInteriorDoorV77>(FindObjectsInactive.Include, FindObjectsSortMode.None));
         }
 
-        void Update() {
-            if (!player || player.externalUiBlocked) { focused = null; return; }
-            if (Time.time >= nextRefresh) { nextRefresh = Time.time + .75f; if (doors.Count == 0) Refresh(); }
+        bool OtherModalUiOpen() {
+            if (lootTransfer && lootTransfer.IsOpen) return true;
+            return false;
+        }
 
-            focused = null;
+        void Update() {
+            if (!player) return;
+            if (Time.unscaledTime >= nextRefresh) {
+                nextRefresh = Time.unscaledTime + .35f;
+                Refresh();
+            }
+
+            focused = FindClosestDoor();
+            if (!focused || OtherModalUiOpen()) return;
+
+            Keyboard kb = Keyboard.current;
+            if (kb == null || !kb.eKey.wasPressedThisFrame) return;
+
+            // Interior doors own this E press for a single frame. This prevents the old
+            // generic interaction scanner from consuming the same key while still avoiding
+            // the stale externalUiBlocked state that previously made house doors inert.
+            player.externalUiBlocked = true;
+            ownsBlock = true;
+            focused.Toggle();
+        }
+
+        HouseInteriorDoorV77 FindClosestDoor() {
+            HouseInteriorDoorV77 bestDoor = null;
             float best = interactionDistance * interactionDistance;
             Vector3 here = player.transform.position;
             foreach (HouseInteriorDoorV77 d in doors) {
                 if (!d || !d.gameObject.activeInHierarchy || d.IsAnimating) continue;
-                Vector3 delta = d.transform.position - here; delta.y = 0f;
+                Vector3 delta = d.InteractionPoint - here;
+                delta.y = 0f;
                 float sq = delta.sqrMagnitude;
-                if (sq <= best) { best = sq; focused = d; }
+                if (sq <= best) { best = sq; bestDoor = d; }
             }
-            Keyboard kb = Keyboard.current;
-            if (focused && kb != null && kb.eKey.wasPressedThisFrame) focused.Toggle();
+            return bestDoor;
+        }
+
+        void LateUpdate() {
+            if (!ownsBlock || !player) return;
+            ownsBlock = false;
+            player.externalUiBlocked = false;
         }
 
         void OnGUI() {
-            if (!player || !focused || player.externalUiBlocked) return;
+            if (!player || !focused || OtherModalUiOpen()) return;
             Rect r = new Rect(Screen.width * .5f - 180f, Screen.height - 66f, 360f, 36f);
             Color old = GUI.color;
             GUI.color = new Color(.018f,.024f,.021f,.95f);

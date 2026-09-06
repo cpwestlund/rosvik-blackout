@@ -25,7 +25,7 @@ namespace Rosvik.Blackout {
         }
 
         public List<Spot> spots = new List<Spot>();
-        public float interactDistance = 2.15f;
+        public float interactDistance = 2.4f;
 
         readonly HashSet<GameObject> searched = new HashSet<GameObject>();
         readonly HashSet<GameObject> opened = new HashSet<GameObject>();
@@ -39,7 +39,7 @@ namespace Rosvik.Blackout {
 
         void Update() {
             nearest = null;
-            float best = interactDistance * interactDistance;
+            float best = float.MaxValue;
             Vector3 here = transform.position;
 
             foreach (Spot s in spots) {
@@ -50,6 +50,8 @@ namespace Rosvik.Blackout {
                 Vector3 d = s.spot.transform.position - here;
                 d.y = 0f;
                 float sqr = d.sqrMagnitude;
+                float range = RangeFor(s);
+                if (sqr > range * range) continue;
                 if (sqr < best) {
                     best = sqr;
                     nearest = s;
@@ -59,6 +61,18 @@ namespace Rosvik.Blackout {
             Keyboard kb = Keyboard.current;
             if (nearest != null && kb != null && kb.eKey.wasPressedThisFrame)
                 Interact(nearest);
+        }
+
+        float RangeFor(Spot s) {
+            if (s == null) return interactDistance;
+            switch (s.kind) {
+                case SpotKind.SchoolEntrance: return 4.8f;
+                case SpotKind.InteriorExit: return 3.4f;
+                case SpotKind.OpenDoor:
+                case SpotKind.LockedDoor:
+                case SpotKind.SportsHallDoor: return 2.9f;
+                default: return interactDistance;
+            }
         }
 
         void Interact(Spot s) {

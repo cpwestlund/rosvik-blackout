@@ -33,6 +33,9 @@ namespace Rosvik.Blackout.EditorTools {
             SurvivalLootTransferV74 ui=player.GetComponent<SurvivalLootTransferV74>();
             if(!ui)ui=player.gameObject.AddComponent<SurvivalLootTransferV74>();
             ui.enabled=true;ui.backpackCapacityKg=34f;ui.discoveryRange=4.5f;
+            CabinetSwingRuntimeV74 swingGuard=player.GetComponent<CabinetSwingRuntimeV74>();
+            if(!swingGuard)swingGuard=player.gameObject.AddComponent<CabinetSwingRuntimeV74>();
+            swingGuard.enabled=true;
 
             int converted=0,fixedSwings=0;
             CozyInteractableV57[] interactables=UnityEngine.Object.FindObjectsByType<CozyInteractableV57>(FindObjectsInactive.Include,FindObjectsSortMode.None);
@@ -78,11 +81,10 @@ namespace Rosvik.Blackout.EditorTools {
                 converted++;
             }
 
-            // One extra emergency cache makes the new transfer/stash loop immediately testable.
             EnsureEmergencyCache(player.transform);
 
             player.SetObjective("Överlev dagen. Öppna behållare och välj själv vad som ska följa med i ryggsäcken.");
-            EditorUtility.SetDirty(player);EditorUtility.SetDirty(ui);
+            EditorUtility.SetDirty(player);EditorUtility.SetDirty(ui);EditorUtility.SetDirty(swingGuard);
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
             AssetDatabase.SaveAssets();
             EditorPrefs.SetInt(Key,Version);
@@ -92,7 +94,7 @@ namespace Rosvik.Blackout.EditorTools {
 
         static Vector3 CorrectSideSwing(Transform hinge,Vector3 open,Vector3 closed){
             if(!hinge||hinge.childCount==0)return open;
-            if(Mathf.Abs(open.y)<35f||Mathf.Abs(open.y)<Mathf.Abs(open.x))return open; // lids stay X-rotation
+            if(Mathf.Abs(open.y)<35f||Mathf.Abs(open.y)<Mathf.Abs(open.x))return open;
             float angle=Mathf.Clamp(Mathf.Abs(open.y),88f,108f);
             float sign=0f;
             string n=hinge.name.ToLowerInvariant();

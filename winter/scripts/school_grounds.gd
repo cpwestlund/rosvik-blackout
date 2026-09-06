@@ -21,7 +21,7 @@ static func build(world: Node3D) -> void:
 		[[-34,-46],[-18,-46],[-18,-16],[-26,-14],[-35,-23]]
 	]
 	for index: int in range(patches.size()):
-		g.slab(root, polygon(patches[index]), 0.008, yard if index == 0 else packed)
+		soft_patch(world, polygon(patches[index]), 0.008, "98aab2" if index == 0 else "8c9fa9")
 	# Snow-covered grass and planting islands establish the spaces around paths.
 	for points: Array in [
 		[[-47,-43],[-38,-43],[-36,-26],[-42,-17],[-54,-20]],
@@ -30,7 +30,7 @@ static func build(world: Node3D) -> void:
 		[[-39,-92],[-31,-94],[-28,-82],[-36,-75]],
 		[[1,-91],[9,-90],[12,-64],[5,-60]],
 		[[70,-50],[100,-48],[107,6],[78,7]]
-	]: g.slab(root, polygon(points), 0.013, undisturbed)
+	]: soft_patch(world, polygon(points), 0.013, "b0bec6")
 	# Parking bay traces show through snow; leave the mission's van/work route open.
 	for x: float in [-17,-14,-11,-8,-5,-2,1]:
 		g.box(root, Vector3(x, 0.023, 82), Vector3(0.08, 0.007, 3.4), line)
@@ -78,3 +78,11 @@ static func polygon(values: Array) -> PackedVector2Array:
 
 static func v3(p: Array) -> Vector3:
 	return Vector3(p[0],0,p[1])
+
+static func soft_patch(world: Node3D, points: PackedVector2Array, height: float, color: String) -> void:
+	for step: int in range(3,0,-1):
+		var outlines = Geometry2D.offset_polygon(points, step * 0.55)
+		var blend = Color(color).lerp(Color("a5b6c3"), float(step) / 4.0).to_html(false)
+		for outline: PackedVector2Array in outlines:
+			world.g.slab(world.static_world, outline, height - step * 0.0005, world.g.mat(blend,0,0.18))
+	world.g.slab(world.static_world, points, height, world.g.mat(color,0,0.24))

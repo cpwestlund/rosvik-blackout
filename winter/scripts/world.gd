@@ -189,7 +189,7 @@ func _road(points: PackedVector2Array, width: float) -> void :
 				var clear = step < steps and _road_bank_clear(bank_a.lerp(bank_b, (float(step) + 0.5) / steps), points)
 				if clear and run_start < 0: run_start = step
 				if not clear and run_start >= 0:
-					_drift(bank_a.lerp(bank_b, float(run_start) / steps), bank_a.lerp(bank_b, float(step) / steps), 0.48, 0.11)
+					_drift(bank_a.lerp(bank_b, float(run_start) / steps), bank_a.lerp(bank_b, float(step) / steps), 0.7, 0.07)
 					run_start = -1
 
 func _road_bank_clear(position_3d: Vector3, own_path: PackedVector2Array) -> bool:
@@ -215,7 +215,7 @@ func _drift(a: Vector3, b: Vector3, width: float, height: float) -> void :
 	for i: int in range(count):
 		for j: int in range(6):
 			var vertices: Array[Vector3] = []
-			for ij: Vector2i in [Vector2i(i, j), Vector2i(i, j + 1), Vector2i(i + 1, j), Vector2i(i, j + 1), Vector2i(i + 1, j + 1), Vector2i(i + 1, j)]:
+			for ij: Vector2i in [Vector2i(i, j), Vector2i(i + 1, j), Vector2i(i, j + 1), Vector2i(i, j + 1), Vector2i(i + 1, j), Vector2i(i + 1, j + 1)]:
 				var t: = float(ij.x) / float(count)
 				var across: = float(ij.y) / 6.0
 				var variation: = 0.85 + 0.12 * sin(t * 23.0) + 0.08 * sin(t * 71.0)
@@ -442,14 +442,14 @@ func _yard() -> void :
 
 
 
-	for p: Vector3 in [Vector3(-28, 0, -33), Vector3(-28, 0, 19), Vector3(-26, 0, 49)]: _bench(p)
+	for p: Vector3 in [Vector3(-23, 0, -36), Vector3(-24, 0, 22), Vector3(-24, 0, 46)]: _bench(p)
 	for z: float in [-11, 13, 36, 62]:
 		g.rod(static_world, Vector3(-39, 0, z), Vector3(-39, 5.8, z), 0.065, metal)
 		g.box(static_world, Vector3(-38.8, 5.85, z), Vector3(0.55, 0.12, 0.32), metal)
 		g.box(static_world, Vector3(-38.8, 5.94, z), Vector3(0.55, 0.05, 0.32), snow)
 
 	for i: int in range(7):
-		var x: = -43.0 - float(i) * 0.6
+		var x: = -38.0 - float(i) * 0.6
 		g.rod(static_world, Vector3(x, 0, -36), Vector3(x, 0.75, -36), 0.025, metal)
 		g.rod(static_world, Vector3(x, 0.75, -36), Vector3(x, 0.75, -35.2), 0.025, metal)
 		g.rod(static_world, Vector3(x, 0.75, -35.2), Vector3(x, 0, -35.2), 0.025, metal)
@@ -717,6 +717,11 @@ func _process(delta: float) -> void :
 		toast.visible = toast_time > 0.0
 	if "--capture" in OS.get_cmdline_user_args():
 		screenshot_frame += 1
+		if screenshot_frame == 2 and "--capture-inventory" in OS.get_cmdline_user_args():
+			player.position = BATTERY_POS
+			_toggle_inventory()
+			inventory.box_list.select(4)
+			inventory._describe(4, false)
 		if screenshot_frame == 30:
 			get_viewport().get_texture().get_image().save_png("/tmp/rosvik-winter.png")
 			get_tree().quit()
@@ -987,6 +992,8 @@ func _inventory_test() -> void:
 	_toggle_inventory()
 	assert(paused and player.paused and inventory.visible)
 	assert(inventory.container_id == "van")
+	for id: String in inventory.art.IDS: assert(inventory.art.icon(id) != null)
+	assert(inventory.box_list.get_item_icon(0) != null)
 	inventory.box_list.select(0)
 	inventory._transfer(true)
 	assert(loot.pack.size() == 1)

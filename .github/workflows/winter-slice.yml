@@ -46,6 +46,11 @@ jobs:
           sudo apt-get install -y -qq xvfb
           mkdir -p build
           xvfb-run -a /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --path . --rendering-method gl_compatibility -- --capture --overview
+      - name: Capture inventory artwork
+        run: |
+          cp /tmp/rosvik-winter.png /tmp/rosvik-overview.png
+          xvfb-run -a /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --path . --rendering-method gl_compatibility -- --capture --capture-inventory
+          cp /tmp/rosvik-winter.png /tmp/rosvik-inventory.png
       - name: Install Windows template
         run: |
           wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz -O /tmp/templates.zip
@@ -55,10 +60,11 @@ jobs:
         run: |
           mkdir -p build
           /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --export-release 'Windows Desktop' build/ROSVIK_BLACKOUT_WINTER.exe
-          cp /tmp/rosvik-winter.png build/ROSVIK_SCHOOL_GROUNDS.png
+          cp /tmp/rosvik-overview.png build/ROSVIK_SCHOOL_GROUNDS.png
+          cp /tmp/rosvik-inventory.png build/ROSVIK_INVENTORY.png
           cp winter/LAS_MIG.txt build/
           cp winter/STARTA_KOMPATIBILITET.cmd build/
       - uses: actions/upload-artifact@v4
         with:
-          name: ROSVIK_BLACKOUT_SCHOOL_GROUNDS
+          name: ROSVIK_BLACKOUT_LOOT_ART
           path: build/

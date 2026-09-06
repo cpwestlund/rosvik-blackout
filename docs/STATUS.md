@@ -34,3 +34,15 @@ CI exports an overview screenshot for inspection alongside the Windows build.
 
 ## School grounds pass
 User approved grounds before loot artwork. Added courtyard/aprons/parking, planted islands, tree groups, Rosvalla field and contextual schoolyard props. Kept mapped Skolgränd; curved the authored pedestrian approaches. Reused existing procedural assets to preserve style and avoid unrelated asset setup. Loot artwork is next: start with 18 placed types, then all 56 catalog entries. Each item needs its own recognizable image.
+
+## Inventory artwork + small environment corrections
+
+18 placed item types now use individual regions of a generated realistic atlas,
+with icons in lists and a larger selected-item preview. Moved three benches off
+the paths and relocated bike racks. Corrected snow-bank winding (dark backfaces),
+lowered road banks and softened ground patch borders. Existing mission, inventory
+and saving are retained. The CI captures both overview and inventory.
+
+User requirement: houses must eventually be enterable and searchable, with cozy,
+detailed furnished interiors. Implement one complete interior before extending
+that system across houses. Discuss the next pass before making further changes.

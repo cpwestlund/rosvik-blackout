@@ -1,5 +1,9 @@
 extends PanelContainer
 
+const ItemArt = preload("res://winter/scripts/item_art.gd")
+var art = ItemArt.new()
+var preview = TextureRect.new()
+
 signal closed
 signal transferred
 var loot: RefCounted
@@ -13,7 +17,7 @@ var take = Button.new()
 var put = Button.new()
 
 func _ready() -> void:
-	position = Vector2(290, 180)
+	position = Vector2(290, 90)
 	size = Vector2(1020, 520)
 	var style = StyleBoxFlat.new()
 	style.bg_color = Color("172832")
@@ -40,7 +44,9 @@ func _ready() -> void:
 		if side == 0: label.text = "RYGGSÄCK"
 		part.add_child(label)
 		var list = pack_list if side == 0 else box_list
-		list.custom_minimum_size = Vector2(460, 250)
+		list.custom_minimum_size = Vector2(460, 280)
+		list.fixed_icon_size = Vector2i(64,64)
+		list.icon_mode = ItemList.ICON_MODE_LEFT
 		list.add_theme_font_size_override("font_size", 15)
 		part.add_child(list)
 		var button = put if side == 0 else take
@@ -48,9 +54,15 @@ func _ready() -> void:
 		part.add_child(button)
 		button.pressed.connect(_transfer.bind(side == 1))
 		list.item_selected.connect(_describe.bind(side == 0))
-	description.custom_minimum_size = Vector2(960, 62)
+	var details = HBoxContainer.new()
+	column.add_child(details)
+	preview.custom_minimum_size = Vector2(112,112)
+	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	details.add_child(preview)
+	description.custom_minimum_size = Vector2(820, 112)
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(description)
+	details.add_child(description)
 	var close = Button.new()
 	close.text = "Tillbaka · I / Esc"
 	close.pressed.connect(func(): closed.emit())
@@ -58,6 +70,7 @@ func _ready() -> void:
 	hide()
 
 func open_box(model: RefCounted, id: String, title: String) -> void:
+	preview.texture = null
 	loot = model
 	container_id = id
 	box_label.text = title if id != "" else "INGEN BEHÅLLARE INOM RÄCKHÅLL"
@@ -76,11 +89,12 @@ func _refresh() -> void:
 
 func _fill(list: ItemList, items: Array) -> void:
 	for item: Dictionary in items:
-		list.add_item("%s ×%d   ·   %d%% skick" % [loot.catalog[item.id].name, item.quantity, item.condition])
+		list.add_item("%s ×%d   ·   %d%% skick" % [loot.catalog[item.id].name, item.quantity, item.condition], art.icon(item.id))
 
 func _describe(index: int, from_pack: bool) -> void:
 	var source: Array = loot.pack if from_pack else loot.containers[container_id]
 	var definition: Dictionary = loot.catalog[source[index].id]
+	preview.texture = art.icon(source[index].id)
 	description.text = "%s\n%.3f kg · %.2f liter per styck" % [definition.description, definition.kg, definition.litres]
 
 func _transfer(taking: bool) -> void:

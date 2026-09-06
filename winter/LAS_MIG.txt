@@ -1,4 +1,4 @@
-ROSVIK / BLACKOUT — Vinter + skolområdet
+ROSVIK / BLACKOUT — Vinter + föremålsbilder
 
 Packa upp hela zipfilen och starta ROSVIK_BLACKOUT_WINTER.exe.
 WASD/pilar: gå. Shift: spring. Håll E: utför uppdraget.
@@ -17,7 +17,8 @@ Sparfil: %APPDATA%\Godot\app_userdata\Rosvik_ Blackout\winter_save_v1.json
 Den exakta mappen kan variera med Godots sanering av projektnamnet.
 
 Nytt skolområdespass: skolgård, parkeringsytor, snötäckta planteringar, trädgrupper
-och Rosvalla. Gångstråken har justerats efter översiktsbilden. Lootbilder kommer senare.
+och Rosvalla. Gångstråken har justerats efter översiktsbilden. De 18 utplacerade föremålstyperna har nu egna bilder i förråd och ryggsäck.
+Välj ett föremål för en större bild. Bänkar/cykelställ är flyttade och vägkanterna mjukare.
 
 Tidigare miljöpass: takytor syns nu uppifrån, sporthallen skiljer sig från skolan och
 snövallar fortsätter inte genom korsande vägar. Hallens interiör/läktare återstår.

@@ -9,6 +9,10 @@ var save_ready = false
 var autosave_clock = 0.0
 
 const Grounds = preload("res://winter/scripts/school_grounds.gd")
+const FirstHouse = preload("res://winter/scripts/first_house.gd")
+var house: Node3D
+var snow_particles: CPUParticles3D
+
 const Geometry = preload("res://winter/scripts/geometry.gd")
 const Player = preload("res://winter/scripts/player.gd")
 const Soundscape = preload("res://winter/scripts/soundscape.gd")
@@ -102,6 +106,7 @@ func _ready() -> void :
 	if "--smoke-test" in OS.get_cmdline_user_args(): call_deferred("_smoke_test")
 	if "--walk-test" in OS.get_cmdline_user_args(): call_deferred("_walk_test")
 	if "--inventory-test" in OS.get_cmdline_user_args(): call_deferred("_inventory_test")
+	if "--house-test" in OS.get_cmdline_user_args(): call_deferred("_house_test")
 
 func _environment() -> void :
 	var env: = Environment.new()
@@ -160,10 +165,15 @@ func _build_map() -> void :
 		elif tags.has("building"):
 			if points[0].is_equal_approx(points[-1]): points.remove_at(points.size() - 1)
 			building_polygons.append(points)
-			_building(feature.id, points, tags)
+			if feature.id == "1185295272":
+				house = FirstHouse.new()
+				add_child(house)
+				house.build(points)
+			else: _building(feature.id, points, tags)
 
 	roads.append({"points": PackedVector2Array([Vector2(-28,-41),Vector2(-27,-20),Vector2(-29,0),Vector2(-31,27),Vector2(-30,55),Vector2(-26,65),Vector2(7,70),Vector2(20,70)]), "width": 3.0})
 	roads.append({"points": PackedVector2Array([Vector2(-67,10),Vector2(-53,14),Vector2(-40,10),Vector2(-30,10),Vector2(-21,9.5)]), "width": 3.0})
+	roads.append({"points": PackedVector2Array([Vector2(-50,-70),Vector2(-59,-69),Vector2(house.doorway().x+1.1,house.doorway().z)]), "width": 1.6})
 	for road: Dictionary in roads: _road(road.points, road.width)
 
 func _road(points: PackedVector2Array, width: float) -> void :
@@ -590,6 +600,7 @@ func _birch(pos: Vector3) -> void :
 
 func _weather() -> void :
 	var p: = CPUParticles3D.new()
+	snow_particles = p
 	add_child(p)
 	p.position = Vector3(-20, 12, 20)
 	p.amount = 800
@@ -707,6 +718,9 @@ func _process(delta: float) -> void :
 	if player == null: return
 	if not paused:
 		time += delta
+		var indoors: bool = house.update_view(player.position)
+		snow_particles.visible = not indoors
+		audio.wind.volume_db = lerpf(audio.wind.volume_db, -38.0 if indoors else -23.0, minf(1.0,delta*3.0))
 		_update_camera(delta)
 		_interaction(delta)
 		autosave_clock += delta
@@ -722,18 +736,40 @@ func _process(delta: float) -> void :
 			_toggle_inventory()
 			inventory.box_list.select(4)
 			inventory._describe(4, false)
+		if screenshot_frame == 2 and "--capture-house" in OS.get_cmdline_user_args():
+			house.set_open(true)
+			player.position = house.to_global(Vector3(2.6,0.1,3.0))
+			house.update_view(player.position)
+			camera_target = player.position
 		if screenshot_frame == 30:
 			get_viewport().get_texture().get_image().save_png("/tmp/rosvik-winter.png")
 			get_tree().quit()
 
 func _update_camera(delta: float) -> void :
-	var desired: = player.position + Vector3(0, 0.8, -3.0)
+	var desired: = player.position + Vector3(0, 0.8, 0 if house.inside else -3.0)
 	camera_target = camera_target.lerp(desired, 1.0 - exp( - delta * 4.5))
 	camera.position = camera_target + Vector3(-38, 36, 38)
 	camera.look_at(camera_target)
-	camera.size = lerpf(camera.size, zoom, 1.0 - exp( - delta * 9.0))
+	camera.size = lerpf(camera.size, 14.0 if house.inside else zoom, 1.0 - exp( - delta * 9.0))
 
 func _interaction(delta: float) -> void :
+	if player.position.distance_to(house.doorway()) < 2.3:
+		hint.text = "E  ·  Stäng ytterdörren" if house.door_open else "E  ·  Öppna ytterdörren"
+		progress.visible = false
+		player.working = false
+		hold_time = 0.0
+		if Input.is_action_just_pressed("interact"):
+			if house.door_open and player.position.distance_to(house.doorway()) < 0.9:
+				_message("Ta ett steg bort från dörröppningen först.")
+			else:
+				house.set_open(not house.door_open)
+				_save_progress()
+		return
+	if house.inside:
+		hint.text = "Bostadshuset · hall, kök och vardagsrum · sökbart innehåll kommer senare"
+		progress.visible = false
+		player.working = false
+		return
 	var target: = BATTERY_POS if stage == 0 else GENERATOR_POS if stage < 3 else SWITCH_POS if stage == 3 else REFUGE_POS
 	var distance: = Vector2(player.position.x - target.x, player.position.z - target.z).length()
 	var verb: = "Ta upp batteriet" if stage == 0 else "Montera batteriet" if stage == 1 else "Starta reservkraften" if stage == 2 else "Slå på reservmatningen" if stage == 3 else "Stanna vid värmepunkten"
@@ -787,6 +823,7 @@ func _message(text: String, duration: float = 5.0) -> void :
 
 func _footstep(pos: Vector3, side: float) -> void :
 	if audio != null: audio.footstep()
+	if house != null and house.contains(pos): return
 	var offset: Vector3 = player.model.basis.x * side * 0.12
 	var mark: = g.ellipsoid(self, pos + offset + Vector3.UP * 0.025, Vector3(0.085, 0.008, 0.16), g.mat("8eabb9"))
 	mark.rotation.y = player.model.rotation.y
@@ -880,9 +917,9 @@ func _smoke_test() -> void :
 	print("WINTER_SMOKE_OK progression=5 mapped_landmarks=", building_polygons.size())
 	get_tree().quit()
 
-func _walk_to(point: Vector3) -> bool:
+func _walk_to(point: Vector3, tolerance: float = 1.65) -> bool:
 	var ticks: = 0
-	while Vector2(player.position.x - point.x, player.position.z - point.z).length() > 1.65:
+	while Vector2(player.position.x - point.x, player.position.z - point.z).length() > tolerance:
 		var d: = (point - player.position)
 		d.y = 0.0
 		d = d.normalized()
@@ -962,7 +999,7 @@ func _is_test() -> bool:
 func _save_progress(path: String = SaveGame.SAVE_PATH) -> void:
 	if not save_ready or (_is_test() and path == SaveGame.SAVE_PATH): return
 	var p = player.position
-	var data = {"version": 1, "stage": stage, "position": [p.x, p.y, p.z], "loot": loot.snapshot()}
+	var data = {"version": 1, "stage": stage, "position": [p.x, p.y, p.z], "loot": loot.snapshot(), "house_door_open": house.door_open}
 	if not SaveGame.write(data, path): _message("Kunde inte spara. Kontrollera ledigt utrymme.", 8.0)
 
 func _restore_save(source: String = SaveGame.SAVE_PATH) -> void:
@@ -973,10 +1010,12 @@ func _restore_save(source: String = SaveGame.SAVE_PATH) -> void:
 		var point = Vector2(data.position[0], data.position[2])
 		var blocked = false
 		for polygon: PackedVector2Array in building_polygons:
-			if Geometry2D.is_point_in_polygon(point, polygon): blocked = true
+			if Geometry2D.is_point_in_polygon(point, polygon) and not house.contains(Vector3(point.x,data.position[1],point.y)): blocked = true
 		if blocked or not loot.restore(data.loot): continue
 		set_stage(int(data.stage))
 		player.position = Vector3(data.position[0], data.position[1], data.position[2])
+		house.set_open(data.get("house_door_open", false) == true)
+		house.update_view(player.position)
 		camera_target = player.position + Vector3(0, 0.8, -3)
 		_update_camera(1.0)
 		_message("Din sparade omgång har laddats.")
@@ -1016,4 +1055,30 @@ func _inventory_test() -> void:
 	for suffix: String in ["", ".bak", ".tmp"]:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path + suffix))
 	print("WINTER_INVENTORY_OK ui_transfer=true pause=true range=true restored_power=true world_save=true")
+	get_tree().quit()
+
+func _house_test() -> void:
+	# Walk from the school through the real outdoor collision world.
+	for point: Vector3 in [Vector3(-28,0,-57),Vector3(-51,0,-57),Vector3(-56,0,-68),house.doorway()+Vector3(1.7,0,0)]:
+		if not await _walk_to(point,0.25): return
+	Input.action_press("interact")
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	Input.action_release("interact")
+	assert(house.door_open)
+	for local: Vector3 in [Vector3(2.6,0,3.0),Vector3(-0.2,0,3.0),Vector3(-0.2,0,0.0),Vector3(1.8,0,-1.0)]:
+		if not await _walk_to(house.to_global(local),0.25): return
+	assert(house.update_view(player.position) and not house.roof.visible)
+	var path = "user://winter_house_automated_test.json"
+	var saved_position = player.position
+	_save_progress(path)
+	player.position = REFUGE_POS
+	_restore_save(path)
+	assert(player.position.distance_to(saved_position)<0.01 and house.inside)
+	for local: Vector3 in [Vector3(-0.2,0,0.0),Vector3(-0.2,0,3.0),Vector3(2.6,0,3.0)]:
+		if not await _walk_to(house.to_global(local),0.25): return
+	if not await _walk_to(house.doorway()+Vector3(2.8,0,0),0.25): return
+	assert(not house.update_view(player.position) and house.roof.visible)
+	for suffix: String in ["", ".bak", ".tmp"]: DirAccess.remove_absolute(ProjectSettings.globalize_path(path+suffix))
+	print("WINTER_HOUSE_OK walk_from_school=true door=true rooms=true save_inside=true exit=true")
 	get_tree().quit()

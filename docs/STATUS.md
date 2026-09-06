@@ -46,3 +46,14 @@ and saving are retained. The CI captures both overview and inventory.
 User requirement: houses must eventually be enterable and searchable, with cozy,
 detailed furnished interiors. Implement one complete interior before extending
 that system across houses. Discuss the next pass before making further changes.
+
+## First house, pass 1
+
+User approved rooms/entry/camera with plausible Rosvik placement. Used existing
+OSM footprint 1185295272 across Skolgränd northwest of the school entrance.
+Hall, kitchen and living room have initial furnishings. Door opens with E;
+player walks through physically. Roof and camera-facing upper walls hide inside,
+collisions stay active; wind is quieter, exterior snow/footprints hidden indoors.
+Position and door state save/load. House test walks from school, opens the door,
+visits rooms, roundtrips save, and walks outside. No searchable house containers
+yet: those and finer cozy details belong to pass 2 after discussion with user.

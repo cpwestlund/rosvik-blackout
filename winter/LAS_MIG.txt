@@ -1,4 +1,4 @@
-ROSVIK / BLACKOUT — Vinter + föremålsbilder
+ROSVIK / BLACKOUT — Vinter + första huset
 
 Packa upp hela zipfilen och starta ROSVIK_BLACKOUT_WINTER.exe.
 WASD/pilar: gå. Shift: spring. Håll E: utför uppdraget.
@@ -35,3 +35,12 @@ kontrollerats automatiskt; din Windows-maskins prestanda är inte verifierad.
 Kartdata © OpenStreetMap contributors, ODbL 1.0:
 https://www.openstreetmap.org/copyright
 Godot Engine: https://godotengine.org/license/
+
+FÖRSTA HUSET
+Det lilla röda huset på andra sidan Skolgränd, snett nordväst om skolentrén,
+är nu möjligt att gå in i. Följ gången från vägen fram till ytterdörren.
+Tryck E för att öppna/stänga och gå genom dörren med WASD.
+Taket och skymmande väggar döljs när du är inne. Kameran går närmare.
+Hall, kök och vardagsrum är grundmöblerade; sökbara lådor och finare detaljer
+kommer i nästa pass. Husets plats/vridning kommer från kartan, insidan är påhittad.
+Din position sparas även inomhus. Du behöver inte börja om din tidigare omgång.

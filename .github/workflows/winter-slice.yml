@@ -40,6 +40,12 @@ jobs:
           /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --quit-after 120 -- --inventory-test 2>&1 | tee /tmp/inventory.log
           grep -q WINTER_INVENTORY_OK /tmp/inventory.log
           ! grep -E 'SCRIPT ERROR|^ERROR:' /tmp/inventory.log
+      - name: Validate enterable house
+        run: |
+          set -euo pipefail
+          /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --fixed-fps 60 --quit-after 24000 -- --house-test 2>&1 | tee /tmp/house.log
+          grep -q WINTER_HOUSE_OK /tmp/house.log
+          ! grep -E 'SCRIPT ERROR|^ERROR:' /tmp/house.log
       - name: Capture environment overview
         run: |
           sudo apt-get update -qq
@@ -51,6 +57,10 @@ jobs:
           cp /tmp/rosvik-winter.png /tmp/rosvik-overview.png
           xvfb-run -a /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --path . --rendering-method gl_compatibility -- --capture --capture-inventory
           cp /tmp/rosvik-winter.png /tmp/rosvik-inventory.png
+      - name: Capture house interior
+        run: |
+          xvfb-run -a /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --path . --rendering-method gl_compatibility -- --capture --capture-house
+          cp /tmp/rosvik-winter.png /tmp/rosvik-house.png
       - name: Install Windows template
         run: |
           wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz -O /tmp/templates.zip
@@ -62,9 +72,10 @@ jobs:
           /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --export-release 'Windows Desktop' build/ROSVIK_BLACKOUT_WINTER.exe
           cp /tmp/rosvik-overview.png build/ROSVIK_SCHOOL_GROUNDS.png
           cp /tmp/rosvik-inventory.png build/ROSVIK_INVENTORY.png
+          cp /tmp/rosvik-house.png build/ROSVIK_HOUSE.png
           cp winter/LAS_MIG.txt build/
           cp winter/STARTA_KOMPATIBILITET.cmd build/
       - uses: actions/upload-artifact@v4
         with:
-          name: ROSVIK_BLACKOUT_LOOT_ART
+          name: ROSVIK_BLACKOUT_FIRST_HOUSE
           path: build/

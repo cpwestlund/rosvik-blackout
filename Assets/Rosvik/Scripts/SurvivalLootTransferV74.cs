@@ -9,7 +9,7 @@ using UnityEngine.InputSystem;
 namespace Rosvik.Blackout {
     public sealed class LootContainerV74 : MonoBehaviour {
         public string displayName = "behållaren";
-        public float radius = 1.9f;
+        public float radius = 2.25f;
         public Transform movingPart;
         public Transform movingPart2;
         public Vector3 closedEuler;
@@ -51,6 +51,8 @@ namespace Rosvik.Blackout {
                 remaining[item] += count;
             }
         }
+
+        public void RefreshHighlight() { CacheHighlight(); }
 
         void CacheHighlight() {
             if (!highlightRenderer || !highlightRenderer.sharedMaterial) return;
@@ -135,7 +137,8 @@ namespace Rosvik.Blackout {
         };
 
         public float backpackCapacityKg = 34f;
-        public float discoveryRange = 4.5f;
+        public float discoveryRange = 5.0f;
+        public float interactionRange = 2.65f;
 
         CoziPlayerV57 player;
         SurvivalPresentationV73 presentation;
@@ -158,17 +161,73 @@ namespace Rosvik.Blackout {
             presentation = GetComponent<SurvivalPresentationV73>(); if (!presentation) presentation = FindFirstObjectByType<SurvivalPresentationV73>();
             defsField = typeof(SurvivalSystemsV69).GetField("defs",BindingFlags.Static|BindingFlags.NonPublic);
             defs = defsField != null ? defsField.GetValue(null) as Dictionary<string,SurvivalSystemsV69.ItemDef> : null;
+            RepairLegacyContainersAtRuntime();
+            FixAllCabinetSwings();
+            Scan();
+        }
+
+        void RepairLegacyContainersAtRuntime() {
+            CozyInteractableV57[] legacy = FindObjectsByType<CozyInteractableV57>(FindObjectsInactive.Include,FindObjectsSortMode.None);
+            foreach (CozyInteractableV57 x in legacy) {
+                if (!x || !x.gameObject.scene.IsValid()) continue;
+                bool hasPrimary=!string.IsNullOrWhiteSpace(x.itemName);
+                bool hasExtras=x.extraItems!=null&&x.extraItems.Any(s=>!string.IsNullOrWhiteSpace(s));
+                if (!hasPrimary && !hasExtras) continue;
+                if (x.kind!=CozyInteractableV57.Kind.Cabinet && x.kind!=CozyInteractableV57.Kind.Loot) continue;
+                LootContainerV74 c=x.GetComponent<LootContainerV74>();
+                if (!c) c=x.gameObject.AddComponent<LootContainerV74>();
+                c.displayName=x.displayName;c.radius=Mathf.Max(2.15f,x.radius);
+                c.movingPart=x.movingPart;c.movingPart2=x.movingPart2;
+                c.closedEuler=x.closedEuler;c.closedEuler2=x.closedEuler2;
+                c.openEuler=x.openEuler;c.openEuler2=x.openEuler2;
+                c.revealOnOpen=x.revealOnOpen;c.highlightRenderer=x.highlightRenderer;c.animationTime=Mathf.Max(.30f,x.animationTime);
+                List<string> its=new List<string>();List<int> cnt=new List<int>();
+                if(hasPrimary){its.Add(x.itemName);cnt.Add(1);}
+                if(x.extraItems!=null)for(int i=0;i<x.extraItems.Length;i++){
+                    string item=x.extraItems[i];if(string.IsNullOrWhiteSpace(item))continue;
+                    int n=x.extraCounts!=null&&i<x.extraCounts.Length?Mathf.Max(1,x.extraCounts[i]):1;
+                    its.Add(item);cnt.Add(n);
+                }
+                c.items=its.ToArray();c.counts=cnt.ToArray();c.RebuildContents();c.RefreshHighlight();
+                Destroy(x);
+            }
+        }
+
+        void FixAllCabinetSwings() {
+            foreach (LootContainerV74 c in FindObjectsByType<LootContainerV74>(FindObjectsSortMode.None)) {
+                if(!c)continue;
+                c.radius=Mathf.Max(c.radius,2.15f);
+                c.openEuler=CorrectSwing(c.movingPart,c.openEuler,c.closedEuler);
+                c.openEuler2=CorrectSwing(c.movingPart2,c.openEuler2,c.closedEuler2);
+            }
+        }
+
+        Vector3 CorrectSwing(Transform hinge,Vector3 open,Vector3 closed) {
+            if(!hinge||hinge.childCount==0)return open;
+            if(Mathf.Abs(open.y)<30f||Mathf.Abs(open.y)<Mathf.Abs(open.x))return open;
+            string n=hinge.name.ToLowerInvariant();
+            float sign=0f;
+            if(n.Contains("left")||n.Contains("vänster"))sign=1f;
+            else if(n.Contains("right")||n.Contains("höger"))sign=-1f;
+            else {
+                Transform leaf=hinge.GetChild(0);
+                if(Mathf.Abs(leaf.localPosition.x)>.02f)sign=Mathf.Sign(leaf.localPosition.x);
+            }
+            if(Mathf.Approximately(sign,0f))sign=Mathf.Sign(open.y);
+            return new Vector3(closed.x,sign*88f,closed.z);
         }
 
         void Update() {
             if (!player) return;
             Keyboard kb = Keyboard.current;
             if (active) {
-                if (kb != null && kb.escapeKey.wasPressedThisFrame) Close();
+                if (kb != null && (kb.escapeKey.wasPressedThisFrame || kb.eKey.wasPressedThisFrame)) Close();
                 return;
             }
-            if (Time.time >= nextScan) { nextScan=Time.time+.10f; Scan(); }
-            if (!nearby || nearbyDistance > nearby.radius || kb == null || !kb.eKey.wasPressedThisFrame) return;
+            if (Time.time >= nextScan) { nextScan=Time.time+.06f; Scan(); }
+            if (!nearby || kb == null || !kb.eKey.wasPressedThisFrame) return;
+            float reach=Mathf.Max(interactionRange,nearby.radius);
+            if(nearbyDistance>reach)return;
             bool close = kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed;
             nearby.Interact(this,close);
         }
@@ -181,7 +240,7 @@ namespace Rosvik.Blackout {
 
         void Scan() {
             LootContainerV74 best=null; float bestD=float.MaxValue;
-            Vector3 here=player.transform.position;
+            Vector3 here=player?player.transform.position:Vector3.zero;
             foreach (LootContainerV74 c in FindObjectsByType<LootContainerV74>(FindObjectsSortMode.None)) {
                 if (!c || c.IsAnimating) continue;
                 Vector3 d=c.transform.position-here; d.y=0; float dist=d.magnitude;
@@ -229,12 +288,14 @@ namespace Rosvik.Blackout {
             n=active.Remove(item,n); if(n<=0)return;
             player.AddItem(item,n);
             player.ShowToast("Tog "+item+(n>1?" x"+n:""),1.2f);
+            if(active.Count(item)<=0)selectedItem="";
         }
 
         void Return(string item,int requested) {
             if (!active || string.IsNullOrEmpty(item)) return;
             int have=player.CountItem(item); int n=Mathf.Min(requested,have); if(n<=0)return;
             if(player.ConsumeItem(item,n)) active.Add(item,n);
+            if(player.CountItem(item)<=0)selectedItem="";
         }
 
         void TakeAll() {
@@ -256,7 +317,7 @@ namespace Rosvik.Blackout {
         void DrawPrompt() {
             if(!nearby || nearbyDistance>discoveryRange)return;
             GUIStyle tiny=Style(10,FontStyle.Bold,new Color(.80f,.80f,.72f),TextAnchor.MiddleCenter,false);
-            bool reach=nearbyDistance<=nearby.radius;
+            bool reach=nearbyDistance<=Mathf.Max(interactionRange,nearby.radius);
             Camera cam=Camera.main;
             if(cam){Vector3 sp=cam.WorldToScreenPoint(nearby.transform.position+Vector3.up*1.25f);if(sp.z>0){float y=Screen.height-sp.y;Rect tag=new Rect(sp.x-68,y-14,136,24);Panel(tag,new Color(.02f,.03f,.027f,.86f),new Color(.42f,.44f,.37f,.8f));GUI.Label(tag,reach?(nearby.HasLoot?"E  SÖK":"E  ÖPPNA/STÄNG"):"SÖKBART",tiny);}}
             if(reach){Rect p=new Rect(Screen.width*.5f-220,Screen.height-62,440,36);Panel(p,new Color(.02f,.03f,.027f,.94f),new Color(.46f,.48f,.40f,.9f));string action=nearby.HasLoot?"E  ÖPPNA / SÖK":"E  ÖPPNA / STÄNG";if(nearby.IsOpen&&nearby.HasLoot)action="E  SÖK   •   SHIFT+E STÄNG";GUI.Label(p,action+"   "+nearby.displayName,tiny);}
@@ -265,11 +326,10 @@ namespace Rosvik.Blackout {
         void DrawTransfer() {
             Color old=GUI.color;GUI.color=new Color(.004f,.007f,.006f,.92f);GUI.DrawTexture(new Rect(0,0,Screen.width,Screen.height),Texture2D.whiteTexture);GUI.color=old;
             GUIStyle title=Style(20,FontStyle.Bold,new Color(.90f,.90f,.83f),TextAnchor.MiddleLeft,false);
-            GUIStyle heading=Style(13,FontStyle.Bold,new Color(.79f,.81f,.75f),TextAnchor.MiddleLeft,false);
             GUIStyle tiny=Style(10,FontStyle.Normal,new Color(.63f,.66f,.61f),TextAnchor.MiddleLeft,false);
             GUIStyle center=Style(10,FontStyle.Bold,new Color(.86f,.87f,.80f),TextAnchor.MiddleCenter,true);
 
-            float margin=Mathf.Max(18,Screen.width*.025f),gap=22,top=54,bottom=52;
+            float margin=Mathf.Max(18,Screen.width*.025f),gap=100,top=54,bottom=52;
             float width=(Screen.width-margin*2-gap)*.5f;
             Rect left=new Rect(margin,top,width,Screen.height-top-bottom);
             Rect right=new Rect(left.xMax+gap,top,width,Screen.height-top-bottom);
@@ -286,12 +346,25 @@ namespace Rosvik.Blackout {
             DrawGrid(left,active.Remaining.ToList(),true,ref leftScroll,center,tiny);
             DrawGrid(right,player.Inventory.ToList(),false,ref rightScroll,center,tiny);
 
+            float cx=left.xMax+gap*.5f-39,cy=Screen.height*.5f-82;
+            if(!string.IsNullOrEmpty(selectedItem)){
+                if(selectedFromContainer){
+                    int stack=active.Count(selectedItem);
+                    if(GUI.Button(new Rect(cx,cy,78,32),"TA 1  >"))Take(selectedItem,1);
+                    if(GUI.Button(new Rect(cx,cy+40,78,32),"TA ALLA >"))Take(selectedItem,Mathf.Max(1,stack));
+                } else {
+                    int stack=player.CountItem(selectedItem);
+                    if(GUI.Button(new Rect(cx,cy,78,32),"<  LÄGG 1"))Return(selectedItem,1);
+                    if(GUI.Button(new Rect(cx,cy+40,78,32),"<  ALLA"))Return(selectedItem,Mathf.Max(1,stack));
+                }
+            }
+
             Rect footer=new Rect(Screen.width*.5f-260,Screen.height-42,520,30);
-            GUI.Label(footer,"KLICKA = 1 ST   •   SHIFT+KLICKA = HELA STACKEN   •   ESC STÄNGER",center);
+            GUI.Label(footer,"KLICKA FÖREMÅL = VÄLJ   •   FLYTTA MED KNAPPARNA   •   E / ESC STÄNGER",center);
             if(GUI.Button(new Rect(left.x+18,left.yMax-52,122,30),"TA ALLT"))TakeAll();
             if(GUI.Button(new Rect(right.xMax-112,right.yMax-52,94,30),"STÄNG"))Close();
 
-            string detail=string.IsNullOrEmpty(selectedItem)?"Välj ett föremål":selectedItem+"   •   "+ItemWeight(selectedItem).ToString("0.00")+" kg/st";
+            string detail=string.IsNullOrEmpty(selectedItem)?"Välj vad du vill flytta":selectedItem+"   •   "+ItemWeight(selectedItem).ToString("0.00")+" kg/st";
             Rect d=new Rect(Screen.width*.5f-210,top+8,420,30);Panel(d,new Color(.02f,.028f,.025f,.92f),new Color(.22f,.25f,.22f,.8f));GUI.Label(d,detail,center);
         }
 
@@ -300,7 +373,6 @@ namespace Rosvik.Blackout {
             int slots=Mathf.Max(cols*5,Mathf.CeilToInt(list.Count/(float)cols)*cols);float contentH=Mathf.CeilToInt(slots/(float)cols)*(cell+space);
             Rect view=new Rect(panel.x+pad,panel.y+y,panel.width-pad*2,panel.height-y-115);
             scroll=GUI.BeginScrollView(view,scroll,new Rect(0,0,view.width-18,Mathf.Max(view.height-4,contentH)));
-            bool shift=Keyboard.current!=null&&(Keyboard.current.leftShiftKey.isPressed||Keyboard.current.rightShiftKey.isPressed);
             for(int i=0;i<slots;i++){
                 int c=i%cols,r=i/cols;Rect slot=new Rect(c*(cell+space),r*(cell+space),cell,cell);bool occupied=i<list.Count;
                 bool selected=occupied&&string.Equals(selectedItem,list[i].Key,StringComparison.OrdinalIgnoreCase)&&selectedFromContainer==fromContainer;
@@ -308,14 +380,10 @@ namespace Rosvik.Blackout {
                 if(!occupied)continue;
                 var kv=list[i];float icon=cell-20;GUI.DrawTexture(new Rect(slot.x+10,slot.y+7,icon,icon),Icon(kv.Key),ScaleMode.ScaleToFit,true);
                 GUI.Label(new Rect(slot.x+4,slot.y+cell-21,slot.width-8,17),kv.Value>1?"x"+kv.Value:"",Style(9,FontStyle.Bold,new Color(.92f,.90f,.82f),TextAnchor.LowerRight,false));
-                if(GUI.Button(slot,GUIContent.none,GUIStyle.none)){
-                    selectedItem=kv.Key;selectedFromContainer=fromContainer;
-                    int n=shift?kv.Value:1;
-                    if(fromContainer)Take(kv.Key,n);else Return(kv.Key,n);
-                }
+                if(GUI.Button(slot,GUIContent.none,GUIStyle.none)){selectedItem=kv.Key;selectedFromContainer=fromContainer;}
             }
             GUI.EndScrollView();
-            string hint=fromContainer?"Klicka för att flytta till ryggsäcken":"Klicka för att lägga tillbaka";
+            string hint=fromContainer?"Välj vad du vill ta med":"Välj vad du vill lägga tillbaka";
             GUI.Label(new Rect(panel.x+18,panel.yMax-86,panel.width-36,20),hint,tiny);
         }
 

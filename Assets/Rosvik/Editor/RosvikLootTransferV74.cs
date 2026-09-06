@@ -81,8 +81,6 @@ namespace Rosvik.Blackout.EditorTools {
                 converted++;
             }
 
-            EnsureEmergencyCache(player.transform);
-
             player.SetObjective("Överlev dagen. Öppna behållare och välj själv vad som ska följa med i ryggsäcken.");
             EditorUtility.SetDirty(player);EditorUtility.SetDirty(ui);EditorUtility.SetDirty(swingGuard);
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
@@ -106,16 +104,6 @@ namespace Rosvik.Blackout.EditorTools {
             }
             if(Mathf.Approximately(sign,0f))sign=Mathf.Sign(open.y);
             return new Vector3(closed.x,sign*angle,closed.z);
-        }
-
-        static void EnsureEmergencyCache(Transform player){
-            if(GameObject.Find("V74 emergency cache"))return;
-            GameObject g=GameObject.CreatePrimitive(PrimitiveType.Cube);g.name="V74 emergency cache";g.transform.position=new Vector3(-13.1f,.32f,-7.4f);g.transform.localScale=new Vector3(1.05f,.62f,.72f);
-            Renderer r=g.GetComponent<Renderer>();
-            Shader s=UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline!=null||UnityEngine.Rendering.GraphicsSettings.defaultRenderPipeline!=null?Shader.Find("Universal Render Pipeline/Lit"):Shader.Find("Standard");
-            if(!s||!s.isSupported)s=Shader.Find("Universal Render Pipeline/Simple Lit");
-            if(s){Material m=new Material(s);Color c=new Color(.28f,.34f,.30f);if(m.HasProperty("_BaseColor"))m.SetColor("_BaseColor",c);if(m.HasProperty("_Color"))m.SetColor("_Color",c);r.sharedMaterial=m;}
-            LootContainerV74 box=g.AddComponent<LootContainerV74>();box.displayName="nödlådan";box.radius=1.8f;box.highlightRenderer=r;box.items=new[]{"Vattenflaska","Energibar","Förband","Batterier"};box.counts=new[]{1,2,1,1};
         }
     }
 }

@@ -24,7 +24,11 @@ namespace Rosvik.Blackout {
             Vector3 p = player.transform.position;
             foreach (CutawayTargetV86 t in cutaways) {
                 if (t == null || !t.visualRoot) continue;
-                bool inside = p.x > t.minXZ.x - t.padding && p.x < t.maxXZ.x + t.padding && p.z > t.minXZ.y - t.padding && p.z < t.maxXZ.y + t.padding;
+                float inset = Mathf.Max(.20f, Mathf.Abs(t.padding));
+                bool valid = (t.maxXZ.x - t.minXZ.x) > inset * 2f && (t.maxXZ.y - t.minXZ.y) > inset * 2f;
+                bool inside = valid &&
+                    p.x > t.minXZ.x + inset && p.x < t.maxXZ.x - inset &&
+                    p.z > t.minXZ.y + inset && p.z < t.maxXZ.y - inset;
                 bool show = !inside;
                 if (force || t.visualRoot.activeSelf != show) t.visualRoot.SetActive(show);
             }

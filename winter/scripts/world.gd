@@ -7,6 +7,12 @@ var loot = Loot.new()
 var inventory = InventoryUI.new()
 var save_ready = false
 var autosave_clock = 0.0
+# Gameplay warmth reserve, not a medical body-temperature simulation.
+var warmth = 100.0
+var warmth_label = Label.new()
+var warmth_bar = ProgressBar.new()
+var cold_warning = false
+
 
 const Grounds = preload("res://winter/scripts/school_grounds.gd")
 const FirstHouse = preload("res://winter/scripts/first_house.gd")
@@ -99,13 +105,16 @@ func _ready() -> void :
 	_ui()
 	set_stage(0)
 	_setup_inventory()
+	_setup_warmth_ui()
 	_restore_save()
+	_update_warmth(0.0)
 	save_ready = true
 	_merge_boxes()
 	print("WINTER_SLICE_READY buildings=", building_polygons.size(), " roads=", roads.size())
 	if "--smoke-test" in OS.get_cmdline_user_args(): call_deferred("_smoke_test")
 	if "--walk-test" in OS.get_cmdline_user_args(): call_deferred("_walk_test")
 	if "--inventory-test" in OS.get_cmdline_user_args(): call_deferred("_inventory_test")
+	if "--warmth-test" in OS.get_cmdline_user_args(): call_deferred("_warmth_test")
 	if "--house-test" in OS.get_cmdline_user_args(): call_deferred("_house_test")
 	if "--house-loot-test" in OS.get_cmdline_user_args(): call_deferred("_house_loot_test")
 
@@ -724,6 +733,7 @@ func _process(delta: float) -> void :
 		audio.wind.volume_db = lerpf(audio.wind.volume_db, -38.0 if indoors else -23.0, minf(1.0,delta*3.0))
 		_update_camera(delta)
 		_interaction(delta)
+		_update_warmth(delta)
 		autosave_clock += delta
 		if autosave_clock >= 30.0:
 			autosave_clock = 0.0
@@ -1007,7 +1017,7 @@ func _is_test() -> bool:
 func _save_progress(path: String = SaveGame.SAVE_PATH) -> void:
 	if not save_ready or (_is_test() and path == SaveGame.SAVE_PATH): return
 	var p = player.position
-	var data = {"version": 1, "stage": stage, "position": [p.x, p.y, p.z], "loot": loot.snapshot(), "house_door_open": house.door_open}
+	var data = {"version": 1, "stage": stage, "position": [p.x, p.y, p.z], "loot": loot.snapshot(), "house_door_open": house.door_open, "warmth": warmth}
 	if not SaveGame.write(data, path): _message("Kunde inte spara. Kontrollera ledigt utrymme.", 8.0)
 
 func _restore_save(source: String = SaveGame.SAVE_PATH) -> void:
@@ -1019,13 +1029,19 @@ func _restore_save(source: String = SaveGame.SAVE_PATH) -> void:
 		var blocked = false
 		for polygon: PackedVector2Array in building_polygons:
 			if Geometry2D.is_point_in_polygon(point, polygon) and not house.contains(Vector3(point.x,data.position[1],point.y)): blocked = true
+		var saved_warmth = data.get("warmth", 100.0)
+		if not (saved_warmth is int or saved_warmth is float): continue
+		if not is_finite(float(saved_warmth)) or saved_warmth < 0 or saved_warmth > 100: continue
 		if blocked or not loot.restore(data.loot): continue
+		warmth = float(saved_warmth)
+		cold_warning = warmth <= 35.0
 		set_stage(int(data.stage))
 		player.position = Vector3(data.position[0], data.position[1], data.position[2])
 		house.set_open(data.get("house_door_open", false) == true)
 		house.update_view(player.position)
 		camera_target = player.position + Vector3(0, 0.8, -3)
 		_update_camera(1.0)
+		_update_warmth(0.0)
 		_message("Din sparade omgång har laddats.")
 		return
 	if FileAccess.file_exists(source):
@@ -1126,4 +1142,86 @@ func _house_loot_test() -> void:
 	for id: String in ids: assert(loot.containers[id].is_empty())
 	for suffix: String in ["", ".bak", ".tmp"]: DirAccess.remove_absolute(ProjectSettings.globalize_path(path+suffix))
 	print("WINTER_HOUSE_LOOT_OK walk_to_storage=true ui_transfers=true room_range=true empty_stays_empty=true")
+	get_tree().quit()
+
+func _setup_warmth_ui() -> void:
+	var column = VBoxContainer.new()
+	column.position = Vector2(1190,32)
+	column.custom_minimum_size = Vector2(370,0)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(column)
+	warmth_label.add_theme_font_size_override("font_size",16)
+	warmth_label.add_theme_color_override("font_shadow_color",Color("18242c"))
+	warmth_label.add_theme_constant_override("shadow_offset_y",2)
+	column.add_child(warmth_label)
+	warmth_bar.custom_minimum_size = Vector2(370,6)
+	warmth_bar.show_percentage = false
+	warmth_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(warmth_bar)
+
+func _warmth_zone() -> String:
+	if house.contains(player.position): return "shelter"
+	if stage >= 4 and player.position.distance_to(REFUGE_POS) <= 3.0: return "heat"
+	return "outside"
+
+func _update_warmth(delta: float) -> void:
+	if paused: return
+	var zone = _warmth_zone()
+	if zone == "heat": warmth = minf(100.0,warmth + delta * 0.8)
+	elif zone == "outside": warmth = maxf(0.0,warmth - delta * 0.09)
+	# Shelter halts further cooling; full recovery requires powered heat.
+	var state = "Varm" if warmth > 65.0 else "Sval" if warmth > 35.0 else "Frusen"
+	var place = "Värmer dig" if zone == "heat" else "I lä" if zone == "shelter" else "Kyla ute"
+	warmth_label.text = "%s · %s · %d%%" % [state,place,roundi(warmth)]
+	warmth_bar.value = warmth
+	warmth_bar.modulate = Color("e4b97d") if zone == "heat" else Color("93bed2")
+	player.cold_factor = clampf((35.0-warmth)/35.0,0.0,1.0)
+	if warmth <= 35.0 and not cold_warning:
+		cold_warning = true
+		_message("Du fryser. Sök skydd i huset eller värm dig vid skolentrén när reservmatningen är på.",8.0)
+	elif warmth > 45.0: cold_warning = false
+
+func _warmth_test() -> void:
+	player.position = BATTERY_POS
+	_update_warmth(300.0)
+	assert(is_equal_approx(warmth,73.0))
+	_toggle_inventory()
+	_update_warmth(300.0)
+	assert(is_equal_approx(warmth,73.0))
+	_toggle_inventory()
+	player.position = house.to_global(Vector3(2.6,0.1,3.0))
+	_update_warmth(300.0)
+	assert(is_equal_approx(warmth,73.0) and _warmth_zone() == "shelter")
+	player.position = REFUGE_POS
+	set_stage(3)
+	_update_warmth(100.0)
+	assert(is_equal_approx(warmth,64.0))
+	set_stage(4)
+	_update_warmth(10.0)
+	assert(is_equal_approx(warmth,72.0) and _warmth_zone() == "heat")
+	player.position = REFUGE_POS + Vector3(3.1,0,0)
+	assert(_warmth_zone() == "outside")
+	_update_warmth(2000.0)
+	assert(warmth == 0.0 and player.cold_factor == 1.0)
+	player.position = REFUGE_POS
+	_update_warmth(200.0)
+	assert(warmth == 100.0 and player.cold_factor == 0.0)
+	var path = "user://winter_warmth_automated_test.json"
+	warmth = 27.0
+	_save_progress(path)
+	warmth = 100.0
+	_restore_save(path)
+	assert(warmth == 27.0 and player.cold_factor > 0.0)
+	var legacy = SaveGame.read_file(path)
+	legacy.erase("warmth")
+	assert(SaveGame.write(legacy,path))
+	_restore_save(path)
+	assert(warmth == 100.0)
+	legacy.warmth = "invalid"
+	assert(SaveGame.write(legacy,path))
+	warmth = 10.0
+	_restore_save(path)
+	assert(warmth == 100.0, "Invalid warmth must fall back to valid backup")
+	for suffix: String in ["", ".bak", ".tmp"]: DirAccess.remove_absolute(ProjectSettings.globalize_path(path+suffix))
+	print("WINTER_WARMTH_OK cooling=true shelter=true powered_heat=true pause=true save_and_legacy=true")
 	get_tree().quit()

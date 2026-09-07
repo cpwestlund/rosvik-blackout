@@ -65,3 +65,11 @@ books and boots, all authored atmosphere rather than a reconstruction of a priva
 Loot schema 2 migrates legacy two-container saves once and preserves empty storage.
 Automated house-loot route exercises all three UI transfers and save/reload.
 Keep subsequent work bounded and discuss the next pass with the user first.
+
+## Warmth pass
+Approved bounded pass: warmth reserve cools outdoors at 0.09 points/sec;
+first house stops cooling; within 3m of REFUGE_POS stage>=4 restores 0.8/sec.
+Discrete HUD and warning at 35%, up to 20% movement penalty, no death.
+Pause/inventory freeze simulation. Saved warmth validated before loot mutation;
+legacy saves default to 100. Automated --warmth-test covers zones/power/range,
+pause, bounds, save migration and malformed-field backup. No item-use expansion.

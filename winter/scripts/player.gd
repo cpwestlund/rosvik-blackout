@@ -10,6 +10,7 @@ var right_arm: = Node3D.new()
 var pack: = Node3D.new()
 var carry_model: = Node3D.new()
 var torch: = SpotLight3D.new()
+var cold_factor = 0.0
 var carrying: = false
 var working: = false
 var paused: = false
@@ -80,6 +81,7 @@ func _physics_process(delta: float) -> void :
 	var direction: = Vector3(input.x * 0.7071 + input.y * -0.7071, 0, input.x * 0.7071 + input.y * 0.7071)
 	var speed: = 5.1 if Input.is_action_pressed("sprint") else 3.0
 	if carrying: speed = 2.2
+	speed *= 1.0 - cold_factor * 0.2
 	if working: direction = Vector3.ZERO
 	velocity.x = move_toward(velocity.x, direction.x * speed, delta * 13.0)
 	velocity.z = move_toward(velocity.z, direction.z * speed, delta * 13.0)

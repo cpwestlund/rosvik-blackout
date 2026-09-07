@@ -45,3 +45,11 @@ Sök köksskåpet, hallbyrån och verktygslådan med I när du står nära.
 Mat, vardagssaker och verktyg har egna bilder; tömda förråd förblir tömda.
 Gardiner, kuddar, en filt, porslin och böcker gör huset mer ombonat. Husets plats/vridning kommer från kartan, insidan är påhittad.
 Din position sparas även inomhus. Du behöver inte börja om din tidigare omgång.
+
+KYLA OCH VÄRME
+Mätaren uppe till höger visar din värmereserv. Den sjunker långsamt utomhus.
+Huset ger lä och stoppar nedkylningen. För att bli varm igen: slå på skolans
+reservmatning och stå nära värmepunkten vid entrén. Där fylls mätaren på.
+Under 35% får du en varning och blir gradvis långsammare, högst 20%.
+Du kan inte dö av kyla i detta första pass. Paus och öppen ryggsäck stoppar tiden.
+Värmen sparas. Äldre sparningar börjar med full värmereserv.

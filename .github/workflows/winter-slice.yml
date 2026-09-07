@@ -1,0 +1,93 @@
+name: Build Winter Slice
+on:
+  push:
+    branches: [rebuild/winter-slice]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot
+        run: |
+          set -euo pipefail
+          wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
+          unzip -q Godot_v4.6.3-stable_linux.x86_64.zip -d /tmp/godot
+          chmod +x /tmp/godot/Godot*
+          echo '/tmp/godot' >> "$GITHUB_PATH"
+      - name: Import and validate mission
+        run: |
+          set -euo pipefail
+          GODOT=/tmp/godot/Godot_v4.6.3-stable_linux.x86_64
+          "$GODOT" --headless --editor --path . --import --quit 2>&1 | tee /tmp/import.log
+          "$GODOT" --headless --path . --quit-after 120 -- --smoke-test 2>&1 | tee /tmp/smoke.log
+          "$GODOT" --headless --path . --fixed-fps 60 --quit-after 24000 -- --walk-test 2>&1 | tee /tmp/walk.log
+          grep -q WINTER_SMOKE_OK /tmp/smoke.log
+          grep -q WINTER_WALK_OK /tmp/walk.log
+          ! grep -E 'SCRIPT ERROR|^ERROR:' /tmp/import.log /tmp/smoke.log /tmp/walk.log
+      - name: Validate loot and saving
+        run: |
+          set -euo pipefail
+          /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --script winter/tests/loot_test.gd 2>&1 | tee /tmp/loot.log
+          grep -q WINTER_LOOT_OK /tmp/loot.log
+          ! grep -E 'SCRIPT ERROR|^ERROR:' /tmp/loot.log
+      - name: Validate inventory in world
+        run: |
+          set -euo pipefail
+          /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --quit-after 120 -- --inventory-test 2>&1 | tee /tmp/inventory.log
+          grep -q WINTER_INVENTORY_OK /tmp/inventory.log
+          ! grep -E 'SCRIPT ERROR|^ERROR:' /tmp/inventory.log
+      - name: Validate enterable house
+        run: |
+          set -euo pipefail
+          /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --fixed-fps 60 --quit-after 24000 -- --house-test 2>&1 | tee /tmp/house.log
+          grep -q WINTER_HOUSE_OK /tmp/house.log
+          ! grep -E 'SCRIPT ERROR|^ERROR:' /tmp/house.log
+      - name: Validate searchable house
+        run: |
+          set -euo pipefail
+          /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --fixed-fps 60 --quit-after 24000 -- --house-loot-test 2>&1 | tee /tmp/house-loot.log
+          grep -q WINTER_HOUSE_LOOT_OK /tmp/house-loot.log
+          ! grep -E 'SCRIPT ERROR|^ERROR:' /tmp/house-loot.log
+      - name: Validate warmth
+        run: |
+          set -euo pipefail
+          /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --quit-after 120 -- --warmth-test 2>&1 | tee /tmp/warmth.log
+          grep -q WINTER_WARMTH_OK /tmp/warmth.log
+          ! grep -E 'SCRIPT ERROR|^ERROR:' /tmp/warmth.log
+      - name: Capture environment overview
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb
+          mkdir -p build
+          xvfb-run -a /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --path . --rendering-method gl_compatibility -- --capture --overview
+      - name: Capture inventory artwork
+        run: |
+          cp /tmp/rosvik-winter.png /tmp/rosvik-overview.png
+          xvfb-run -a /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --path . --rendering-method gl_compatibility -- --capture --capture-inventory
+          cp /tmp/rosvik-winter.png /tmp/rosvik-inventory.png
+      - name: Capture house interior
+        run: |
+          xvfb-run -a /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --path . --rendering-method gl_compatibility -- --capture --capture-house
+          cp /tmp/rosvik-winter.png /tmp/rosvik-house.png
+      - name: Install Windows template
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz -O /tmp/templates.zip
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable"
+          unzip -j -q /tmp/templates.zip 'templates/windows_release_x86_64.exe' -d "$HOME/.local/share/godot/export_templates/4.6.3.stable"
+      - name: Export
+        run: |
+          mkdir -p build
+          /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --export-release 'Windows Desktop' build/ROSVIK_BLACKOUT_WINTER.exe
+          cp /tmp/rosvik-overview.png build/ROSVIK_SCHOOL_GROUNDS.png
+          cp /tmp/rosvik-inventory.png build/ROSVIK_INVENTORY.png
+          cp /tmp/rosvik-house.png build/ROSVIK_HOUSE.png
+          cp winter/LAS_MIG.txt build/
+          cp winter/STARTA_KOMPATIBILITET.cmd build/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ROSVIK_BLACKOUT_WARMTH
+          path: build/

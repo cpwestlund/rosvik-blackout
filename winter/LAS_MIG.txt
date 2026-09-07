@@ -1,0 +1,55 @@
+ROSVIK / BLACKOUT — Vinter + första huset
+
+Packa upp hela zipfilen och starta ROSVIK_BLACKOUT_WINTER.exe.
+WASD/pilar: gå. Shift: spring. Håll E: utför uppdraget.
+I: ryggsäck. Nära servicebilen eller värmepunkten öppnas även dess förråd.
+Markera ett föremål och välj Ta eller Lägg här. Ett exemplar flyttas åt gången.
+F: ficklampa. Mushjul: zoom. Esc: paus. F2: dölj/visa gränssnittet.
+
+Uppdrag: hämta batteriet vid servicebilen, bär det till generatorn,
+starta den, slå på skolans reservmatning och återvänd till entrén.
+
+Ryggsäcken rymmer 28 liter och högst 18 kg. Föremål har individuellt skick.
+Din position, uppdragssteg och förråd sparas automatiskt var 30:e sekund,
+vid föremålsflytt, vid uppdragssteg och när du avslutar. Nästa start fortsätter
+sparningen. Pausmenyns Börja om startar en ny omgång efter bekräftelse.
+Sparfil: %APPDATA%\Godot\app_userdata\Rosvik_ Blackout\winter_save_v1.json
+Den exakta mappen kan variera med Godots sanering av projektnamnet.
+
+Nytt skolområdespass: skolgård, parkeringsytor, snötäckta planteringar, trädgrupper
+och Rosvalla. Gångstråken har justerats efter översiktsbilden. De 18 utplacerade föremålstyperna har nu egna bilder i förråd och ryggsäck.
+Välj ett föremål för en större bild. Bänkar/cykelställ är flyttade och vägkanterna mjukare.
+
+Tidigare miljöpass: takytor syns nu uppifrån, sporthallen skiljer sig från skolan och
+snövallar fortsätter inte genom korsande vägar. Hallens interiör/läktare återstår.
+
+56 föremålstyper finns i katalogen; 18 typer är placerade i fem förråd.
+Föremålen kan ännu samlas och lagras. Förbrukning, reparation, garage,
+full överlevnad och kampanj ingår inte i denna version.
+Batteriet för första uppdraget bärs separat som tidigare.
+
+Om standardgrafiken inte startar: använd STARTA_KOMPATIBILITET.cmd.
+Windows-bygget är exporterad Godot 4.6.3. Spelregler och uppdragsväg har
+kontrollerats automatiskt; din Windows-maskins prestanda är inte verifierad.
+
+Kartdata © OpenStreetMap contributors, ODbL 1.0:
+https://www.openstreetmap.org/copyright
+Godot Engine: https://godotengine.org/license/
+
+FÖRSTA HUSET
+Det lilla röda huset på andra sidan Skolgränd, snett nordväst om skolentrén,
+är nu möjligt att gå in i. Följ gången från vägen fram till ytterdörren.
+Tryck E för att öppna/stänga och gå genom dörren med WASD.
+Taket och skymmande väggar döljs när du är inne. Kameran går närmare.
+Sök köksskåpet, hallbyrån och verktygslådan med I när du står nära.
+Mat, vardagssaker och verktyg har egna bilder; tömda förråd förblir tömda.
+Gardiner, kuddar, en filt, porslin och böcker gör huset mer ombonat. Husets plats/vridning kommer från kartan, insidan är påhittad.
+Din position sparas även inomhus. Du behöver inte börja om din tidigare omgång.
+
+KYLA OCH VÄRME
+Mätaren uppe till höger visar din värmereserv. Den sjunker långsamt utomhus.
+Huset ger lä och stoppar nedkylningen. För att bli varm igen: slå på skolans
+reservmatning och stå nära värmepunkten vid entrén. Där fylls mätaren på.
+Under 35% får du en varning och blir gradvis långsammare, högst 20%.
+Du kan inte dö av kyla i detta första pass. Paus och öppen ryggsäck stoppar tiden.
+Värmen sparas. Äldre sparningar börjar med full värmereserv.

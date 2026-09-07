@@ -17,7 +17,7 @@ namespace Rosvik.Blackout.EditorTools {
         const string Generated = "Assets/Rosvik/GeneratedV92";
 
         static Shader shader;
-        static Material snow, snowShade, packed, asphalt, ochre, ochreDark, brick, cream, blue, blueDark, roof, glass, warmGlass, metal, wood, pine, trunk, sportFloor, ice, red, white;
+        static Material snow, snowShade, packed, asphalt, ochre, ochreDark, brick, cream, blue, blueDark, roof, glass, warmGlass, metal, wood, pine, trunk, sportFloor, ice, red, white, warmFloor;
 
         static RosvikCampusBenchmarkV92() {
             if (EditorPrefs.GetInt(Key, 0) >= Version) return;
@@ -353,8 +353,8 @@ namespace Rosvik.Blackout.EditorTools {
         static void Bench(Transform p,Vector3 pos,float yaw){Transform r=Group(p,"bench");r.position=pos;r.rotation=Quaternion.Euler(0,yaw,0);Box("seat",r,new Vector3(0,.40f,0),new Vector3(2.2f,.14f,.50f),wood,false);Box("back",r,new Vector3(0,.73f,.20f),new Vector3(2.2f,.55f,.10f),wood,false);for(int s=-1;s<=1;s+=2)Box("leg",r,new Vector3(s*.85f,.20f,0),new Vector3(.10f,.40f,.10f),metal,false);}
         static void Lamp(Transform p,Vector3 pos){Box("lamp post",p,pos+new Vector3(0,1.8f,0),new Vector3(.10f,3.6f,.10f),metal,false);Box("lamp arm",p,pos+new Vector3(.30f,3.45f,0),new Vector3(.65f,.10f,.10f),metal,false);WarmPoint(p,pos+new Vector3(.60f,3.32f,0),4.2f,.75f);}
         static void WarmPoint(Transform p,Vector3 pos,float range,float intensity){GameObject g=new GameObject("warm light");g.transform.SetParent(p,true);g.transform.position=pos;Light l=g.AddComponent<Light>();l.type=LightType.Point;l.range=range;l.intensity=intensity;l.color=new Color(1f,.72f,.42f);l.shadows=LightShadows.Soft;}
-        static void Tree(Transform p,Vector3 pos,float scale){Transform r=Group(p,"spruce");r.position=pos;r.localScale=Vector3.one*scale;GameObject t=Primitive(PrimitiveType.Cylinder,"trunk",r,new Vector3(0,.9f,0),new Vector3(.22f,.9f,.22f),trunk,false);for(int i=0;i<3;i++){GameObject c=Primitive(PrimitiveType.Cylinder,"crown",r,new Vector3(0,1.25f+i*.70f,0),new Vector3(1.15f-i*.18f,.36f,1.15f-i*.18f),pine,false);c.transform.localScale=new Vector3(1.1f-i*.15f,.45f,1.1f-i*.15f);} }
-        static void Drift(Transform p,Vector3 pos,float s){GameObject g=Primitive(PrimitiveType.Sphere,"snow drift",p,pos+new Vector3(0,.05f,0),new Vector3(s,.18f,s*.72f),snowShade,false);}
+        static void Tree(Transform p,Vector3 pos,float scale){Transform r=Group(p,"spruce");r.position=pos;r.localScale=Vector3.one*scale;Primitive(PrimitiveType.Cylinder,"trunk",r,new Vector3(0,.9f,0),new Vector3(.22f,.9f,.22f),trunk,false);for(int i=0;i<3;i++){GameObject c=Primitive(PrimitiveType.Cylinder,"crown",r,new Vector3(0,1.25f+i*.70f,0),new Vector3(1.15f-i*.18f,.36f,1.15f-i*.18f),pine,false);c.transform.localScale=new Vector3(1.1f-i*.15f,.45f,1.1f-i*.15f);} }
+        static void Drift(Transform p,Vector3 pos,float s){Primitive(PrimitiveType.Sphere,"snow drift",p,pos+new Vector3(0,.05f,0),new Vector3(s,.18f,s*.72f),snowShade,false);}
 
         static Mesh GridMesh(string name,float w,float d,int nx,int nz,float amp){Mesh m=new Mesh{name=name};var v=new List<Vector3>();var uv=new List<Vector2>();var tr=new List<int>();for(int z=0;z<=nz;z++)for(int x=0;x<=nx;x++){float fx=(x/(float)nx-.5f)*w,fz=(z/(float)nz-.5f)*d;float y=(Mathf.Sin(fx*.17f)+Mathf.Cos(fz*.13f)+Mathf.Sin((fx+fz)*.09f))*.333f*amp;v.Add(new Vector3(fx,y,fz));uv.Add(new Vector2(x/(float)nx,z/(float)nz));}for(int z=0;z<nz;z++)for(int x=0;x<nx;x++){int a=z*(nx+1)+x,b=a+1,c=a+(nx+1),e=c+1;tr.Add(a);tr.Add(c);tr.Add(b);tr.Add(b);tr.Add(c);tr.Add(e);}m.SetVertices(v);m.SetUVs(0,uv);m.SetTriangles(tr,0);m.RecalculateNormals();m.RecalculateBounds();return m;}
 

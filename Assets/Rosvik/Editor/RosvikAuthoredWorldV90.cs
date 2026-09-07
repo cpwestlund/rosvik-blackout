@@ -49,7 +49,6 @@ namespace Rosvik.Blackout.EditorTools {
             GameObject world = GameObject.Find(WorldRootName);
             if (!world) throw new Exception("V88 CLEAN OSM WORLD missing. Run V88 once first.");
 
-            // V89 made orientation markers and world labels that became visually noisy and, in some pipelines, magenta.
             GameObject v89 = GameObject.Find(ReadabilityRoot);
             if (v89) UnityEngine.Object.DestroyImmediate(v89);
             foreach (WorldReadabilityV89 rr in UnityEngine.Object.FindObjectsByType<WorldReadabilityV89>(FindObjectsInactive.Include, FindObjectsSortMode.None))
@@ -60,7 +59,6 @@ namespace Rosvik.Blackout.EditorTools {
             Transform details = FindChild(world.transform, "07 WORLD DETAILS");
             if (!landmarks || !interiors || !details) throw new Exception("V88 world groups missing");
 
-            // Capture arena position/orientation from the OSM-derived V88 shell, then throw the shell away.
             GameObject oldSchool = FindDeep(world.transform, "ROSVIKS SKOLA · CLEAN OSM V88");
             GameObject oldArena = FindDeep(world.transform, "NORRBOTTEN STÅL ARENA · CLEAN OSM V88");
             GameObject oldStone = FindDeep(world.transform, "STENSKOLAN · OSM V88");
@@ -84,7 +82,6 @@ namespace Rosvik.Blackout.EditorTools {
             BuildArenaInterior(interiors, arena.transform);
             BuildCampus(details, school.transform, arena.transform);
 
-            // Roof-only cutaway. Walls remain as context when the player enters.
             OsmWorldRuntimeV86 runtime = world.GetComponent<OsmWorldRuntimeV86>();
             if (!runtime) runtime = world.AddComponent<OsmWorldRuntimeV86>();
             GameObject schoolRoof = FindDeep(school.transform, "ROOF ROOT");
@@ -129,13 +126,10 @@ namespace Rosvik.Blackout.EditorTools {
             Transform roofs = Group(root.transform,"ROOF ROOT");
             Transform facade = Group(root.transform,"DETAILS");
 
-            // Main wing is deliberately aligned to the existing school gameplay backend.
             BuildSchoolBlock(walls, roofs, new Vector3(0,0,0), 36f, 17f, 3.05f, true);
-            // Rear library/admin wing gives the OSM school a proper footprint without spanning one giant roof over everything.
             BuildSchoolBlock(walls, roofs, new Vector3(-8.5f,0,12.6f), 15f, 9.5f, 2.85f, false);
             BuildSchoolBlock(walls, roofs, new Vector3(10.5f,0,11.0f), 10f, 7.0f, 2.85f, false);
 
-            // Main entrance: unmistakable school entrance, separate from any scaled wall.
             Box("entrance vestibule", facade, new Vector3(0,1.15f,-8.82f), new Vector3(6.0f,2.3f,.72f), brick, false);
             Box("glass double door", facade, new Vector3(0,1.05f,-9.22f), new Vector3(2.2f,2.05f,.12f), glass, false);
             Box("door mullion", facade, new Vector3(0,1.05f,-9.30f), new Vector3(.08f,2.02f,.05f), trim, false);
@@ -145,7 +139,6 @@ namespace Rosvik.Blackout.EditorTools {
             Box("school sign board", facade, new Vector3(0,2.72f,-9.31f), new Vector3(3.8f,.50f,.07f), blue, false);
             WorldText(facade,"ROSVIKS SKOLA",new Vector3(0,2.72f,-9.36f),Quaternion.Euler(0,180,0),.085f);
 
-            // Warm, sparse windows. The building now reads as a school without a giant floating label.
             for(int i=-6;i<=6;i++) {
                 if(Mathf.Abs(i)<=1) continue;
                 Material pane = (i== -4 || i==3) ? warmGlass : glass;
@@ -154,7 +147,6 @@ namespace Rosvik.Blackout.EditorTools {
             for(int i=-5;i<=5;i+=2) Window(facade,new Vector3(-18.12f,1.68f,i*1.35f),90f,glass,1.35f);
             for(int i=-5;i<=5;i+=2) Window(facade,new Vector3(18.12f,1.68f,i*1.35f),90f,(i==1?warmGlass:glass),1.35f);
 
-            // Exterior character.
             Box("bench L", facade, new Vector3(-7.0f,.36f,-10.0f), new Vector3(3.2f,.16f,.55f), wood, false);
             Box("bench R", facade, new Vector3(7.0f,.36f,-10.0f), new Vector3(3.2f,.16f,.55f), wood, false);
             for(int i=-4;i<=4;i++) Box("bike rack", facade, new Vector3(-12.0f+i*.62f,.32f,-11.0f), new Vector3(.06f,.64f,.72f), metal, false, Quaternion.Euler(0,0,18));
@@ -172,7 +164,6 @@ namespace Rosvik.Blackout.EditorTools {
                 Box("front wall L",block,new Vector3(-(door*.5f+side*.5f),h*.5f,-d*.5f),new Vector3(side,h,t),ochre,true);
                 Box("front wall R",block,new Vector3((door*.5f+side*.5f),h*.5f,-d*.5f),new Vector3(side,h,t),ochre,true);
             } else Box("front wall",block,new Vector3(0,h*.5f,-d*.5f),new Vector3(w,h,t),ochre,true);
-            // brick plinth on four sides
             Box("brick back",block,new Vector3(0,.34f,d*.5f+.02f),new Vector3(w+.12f,.64f,.24f),brick,false);
             Box("brick front",block,new Vector3(0,.34f,-d*.5f-.02f),new Vector3(w+.12f,.64f,.24f),brick,false);
             Box("brick left",block,new Vector3(-w*.5f-.02f,.34f,0),new Vector3(.24f,.64f,d),brick,false);
@@ -188,7 +179,6 @@ namespace Rosvik.Blackout.EditorTools {
             center.y=0; root.transform.position=center; root.transform.rotation=Quaternion.Euler(0,yaw,0);
             float w=Mathf.Clamp(Mathf.Max(oldSize.x,oldSize.z)*.55f,22f,32f);
             float d=Mathf.Clamp(Mathf.Max(oldSize.x,oldSize.z),36f,54f);
-            // If wall-yaw caused bounds to swap, keep arena long and narrow.
             if(w>d){float q=w;w=d*.55f;d=q;}
             float h=5.6f;
             Transform walls=Group(root.transform,"WALLS + FACADE"); Transform roofs=Group(root.transform,"ROOF ROOT"); Transform det=Group(root.transform,"DETAILS");
@@ -225,36 +215,30 @@ namespace Rosvik.Blackout.EditorTools {
             GameObject root=new GameObject("ROSVIKS SKOLA INTERIOR · AUTHORED V90");root.transform.SetParent(parent,true);root.transform.position=new Vector3(0,0,7.35f);
             Box("school floor",root.transform,new Vector3(0,.035f,0),new Vector3(35.5f,.07f,16.5f),greenFloor,false);
             Box("corridor floor",root.transform,new Vector3(0,.075f,-3.9f),new Vector3(35.2f,.025f,4.3f),warmFloor,false);
-            // Low wall language: readable cutaway, never a wall that hides the character.
             LowWall(root.transform,new Vector3(-17.7f,0,8.0f),new Vector3(17.7f,0,8.0f),1.0f);
             LowWall(root.transform,new Vector3(-17.7f,0,-8.0f),new Vector3(-17.7f,0,8.0f),1.0f);
             LowWall(root.transform,new Vector3(17.7f,0,-8.0f),new Vector3(17.7f,0,8.0f),1.0f);
             foreach(float x in new[]{-8.0f,-.5f,7.4f,12.5f}) LowWall(root.transform,new Vector3(x,0,-1.8f),new Vector3(x,0,8.0f),.92f);
-            // Ordered furniture, no random scatter.
             for(int row=0;row<3;row++) for(int col=0;col<2;col++) {
                 Vector3 p=new Vector3(-14.2f+col*3.0f,.0f,1.0f+row*2.15f);
                 PlaceAsset(root.transform,"table_small",p,0f,.72f);
                 PlaceAsset(root.transform,"chair_A",p+new Vector3(0,0,-.75f),180f,.72f);
             }
             PlaceAsset(root.transform,"shelf_A_big",new Vector3(-17.0f,0,5.8f),90f,.78f);
-            // Staff room / reading nook
             PlaceAsset(root.transform,"rug_rectangle_stripes_A",new Vector3(3.3f,.02f,3.6f),0f,1.05f);
             PlaceAsset(root.transform,"couch_pillows",new Vector3(2.2f,0,5.2f),180f,.82f);
             PlaceAsset(root.transform,"armchair_pillows",new Vector3(5.4f,0,4.0f),-90f,.82f);
             PlaceAsset(root.transform,"table_low",new Vector3(3.7f,0,3.9f),0f,.80f);
             PlaceAsset(root.transform,"lamp_standing",new Vector3(6.1f,0,5.6f),0f,.80f);
-            // Library
             PlaceAsset(root.transform,"shelf_B_large_decorated",new Vector3(10.0f,0,6.2f),180f,.78f);
             PlaceAsset(root.transform,"shelf_B_small_decorated",new Vector3(10.0f,0,3.5f),180f,.78f);
             PlaceAsset(root.transform,"armchair_pillows",new Vector3(9.8f,0,.7f),0f,.78f);
-            // Corridor lockers/benches
             for(int i=-6;i<=6;i++) if(i%2==0) Box("locker",root.transform,new Vector3(i*2.2f,.58f,-1.55f),new Vector3(.95f,1.1f,.35f),i%4==0?blue:cream,false);
         }
 
         static void BuildArenaInterior(Transform parent, Transform arena) {
             GameObject root=new GameObject("ICE RINK INTERIOR · AUTHORED V90");root.transform.SetParent(parent,true);root.transform.position=arena.position;root.transform.rotation=arena.rotation;
-            Renderer[] rr=arena.GetComponentsInChildren<Renderer>(true); Bounds b=RendererBounds(arena);
-            // Local proportions are intentionally standard-rink-like even if OSM footprint is a little irregular.
+            Bounds b=RendererBounds(arena.gameObject);
             float rw=Mathf.Clamp(Mathf.Min(b.size.x,b.size.z)*.72f,20f,27f); float rd=Mathf.Clamp(Mathf.Max(b.size.x,b.size.z)*.72f,34f,48f);
             Box("ice",root.transform,new Vector3(0,.04f,0),new Vector3(rw,.08f,rd),ice,false);
             float h=.82f;
@@ -271,7 +255,6 @@ namespace Rosvik.Blackout.EditorTools {
         static void BuildCampus(Transform parent, Transform school, Transform arena) {
             Box("school forecourt",parent,new Vector3(0,.01f,-4.3f),new Vector3(31f,.025f,8.0f),packed,false);
             for(int i=-2;i<=2;i++) Lamp(parent,new Vector3(i*5.5f,0,-8.3f));
-            // A narrow, clear pedestrian connection toward the arena rather than the giant V89 slab.
             Vector3 a=new Vector3(16f,.012f,1f), b=arena.position; b.y=.012f;
             SlabBetween("campus footpath",parent,a,b,2.0f,packed);
         }

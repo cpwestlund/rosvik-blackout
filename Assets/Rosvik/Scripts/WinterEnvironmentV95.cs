@@ -36,7 +36,7 @@ namespace Rosvik.Blackout {
             lastMoveDirection = dir;
 
             if (TryFindSnowSurface(p, out RaycastHit hit)) {
-                Vector3 right = new Vector3(dir.z, 0f, -dir.x);
+                Vector3 right = Vector3.Cross(hit.normal, dir).normalized;
                 float side = leftFoot ? -footSeparation : footSeparation;
                 Vector3 pos = hit.point + right * side + hit.normal * surfaceOffset;
                 SpawnFootprint(pos, hit.normal, dir, leftFoot);
@@ -63,9 +63,10 @@ namespace Rosvik.Blackout {
         void SpawnFootprint(Vector3 pos, Vector3 normal, Vector3 direction, bool left) {
             GameObject g = new GameObject(left ? "left boot print" : "right boot print");
             g.transform.position = pos;
-            Quaternion face = Quaternion.LookRotation(direction, normal);
-            g.transform.rotation = face * Quaternion.Euler(90f, left ? -4f : 4f, 0f);
-            g.transform.localScale = new Vector3(footprintWidth / 0.14f, footprintLength / 0.32f, 1f);
+            Vector3 tangent = Vector3.ProjectOnPlane(direction, normal).normalized;
+            if (tangent.sqrMagnitude < 0.01f) tangent = Vector3.forward;
+            g.transform.rotation = Quaternion.LookRotation(tangent, normal) * Quaternion.Euler(0f, left ? -4f : 4f, 0f);
+            g.transform.localScale = new Vector3(footprintWidth / 0.14f, 1f, footprintLength / 0.32f);
 
             MeshFilter mf = g.AddComponent<MeshFilter>();
             mf.sharedMesh = footprintMesh;
@@ -85,12 +86,12 @@ namespace Rosvik.Blackout {
             const float w = 0.14f;
             const float l = 0.32f;
             Vector3[] v = {
-                new Vector3(-w*.36f,-l*.50f,0), new Vector3(w*.36f,-l*.50f,0),
-                new Vector3(w*.48f,-l*.26f,0),  new Vector3(w*.50f,l*.20f,0),
-                new Vector3(w*.34f,l*.48f,0),   new Vector3(-w*.34f,l*.48f,0),
-                new Vector3(-w*.50f,l*.20f,0),  new Vector3(-w*.48f,-l*.26f,0)
+                new Vector3(-w*.36f,0,-l*.50f), new Vector3(w*.36f,0,-l*.50f),
+                new Vector3(w*.48f,0,-l*.26f),  new Vector3(w*.50f,0,l*.20f),
+                new Vector3(w*.34f,0,l*.48f),   new Vector3(-w*.34f,0,l*.48f),
+                new Vector3(-w*.50f,0,l*.20f),  new Vector3(-w*.48f,0,-l*.26f)
             };
-            int[] t = {0,1,2, 0,2,7, 7,2,3, 7,3,6, 6,3,4, 6,4,5};
+            int[] t = {0,2,1, 0,7,2, 7,3,2, 7,6,3, 6,4,3, 6,5,4};
             Vector2[] uv = {
                 new Vector2(.14f,0),new Vector2(.86f,0),new Vector2(.98f,.24f),new Vector2(1,.70f),
                 new Vector2(.82f,1),new Vector2(.18f,1),new Vector2(0,.70f),new Vector2(.02f,.24f)

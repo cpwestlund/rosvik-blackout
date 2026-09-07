@@ -69,13 +69,11 @@ namespace Rosvik.Blackout.EditorTools {
         }
 
         static void BuildSchoolInterior(Transform root){
-            // One continuous floor, then clearly differentiated rooms. Architecture is simple; furniture carries the room identity.
             Box("school interior floor",root,new Vector3(-10,.035f,-4),new Vector3(24.35f,.07f,12.25f),floorWarm,false);
             Box("north wing floor",root,new Vector3(-16,.038f,5.05f),new Vector3(11.35f,.075f,6.85f),floorClass,false);
             Box("main corridor floor",root,new Vector3(-10,.078f,-1.15f),new Vector3(23.6f,.035f,2.05f),floorClass,false);
             Box("entry runner",root,new Vector3(-10,.082f,-7.65f),new Vector3(2.5f,.025f,4.1f),rugGreen,false);
 
-            // Low intentional cutaway partitions: visually real rooms without blocking camera readability.
             LowWall(root,new Vector3(-14.6f,.62f,-5.25f),new Vector3(.11f,1.24f,6.2f));
             LowWall(root,new Vector3(-7.6f,.62f,-5.25f),new Vector3(.11f,1.24f,6.2f));
             LowWall(root,new Vector3(-1.2f,.62f,-5.25f),new Vector3(.11f,1.24f,6.2f));
@@ -145,17 +143,17 @@ namespace Rosvik.Blackout.EditorTools {
 
         static void CleanupFalseInteractions(Transform campus){
             foreach(CozyInteractableV57 x in campus.GetComponentsInChildren<CozyInteractableV57>(true).ToArray()){
-                if(!x)continue;string path=Path(x.transform).ToLowerInvariant();
+                if(!x)continue;string path=HierarchyPath(x.transform).ToLowerInvariant();
                 if(IsArchitecture(path)&&!IsRealInteractive(path))UnityEngine.Object.DestroyImmediate(x);
             }
             foreach(LootContainerV74 x in campus.GetComponentsInChildren<LootContainerV74>(true).ToArray()){
-                if(!x)continue;string path=Path(x.transform).ToLowerInvariant();
+                if(!x)continue;string path=HierarchyPath(x.transform).ToLowerInvariant();
                 if(IsArchitecture(path)&&!IsRealInteractive(path))UnityEngine.Object.DestroyImmediate(x);
             }
         }
         static bool IsArchitecture(string s){return s.Contains("wall")||s.Contains("facade")||s.Contains("roof")||s.Contains("plinth")||s.Contains("floor")||s.Contains("window")||s.Contains("mullion")||s.Contains("canopy")||s.Contains("post")||s.Contains("seam")||s.Contains("snow");}
         static bool IsRealInteractive(string s){return s.Contains("door")||s.Contains("cabinet")||s.Contains("locker")||s.Contains("skåp")||s.Contains("shelf")||s.Contains("låda");}
-        static string Path(Transform t){string s=t.name;while(t.parent){t=t.parent;s=t.name+"/"+s;}return s;}
+        static string HierarchyPath(Transform t){string s=t.name;while(t.parent){t=t.parent;s=t.name+"/"+s;}return s;}
 
         static void CleanupUnreadableCampusProps(Transform campus){
             foreach(Transform t in campus.GetComponentsInChildren<Transform>(true).ToArray()){
@@ -171,7 +169,6 @@ namespace Rosvik.Blackout.EditorTools {
         }
 
         static void BuildReadableEntranceDetails(Transform root){
-            // Replace the unreadable row of thin rectangles with a small, obvious coat/bike utility area.
             Transform r=Group(root,"READABLE SCHOOL ENTRANCE DETAILS");
             Box("salt sand box",r,new Vector3(-13.8f,.28f,-11.9f),new Vector3(.85f,.55f,.65f),wood,false);
             Box("waste bin",r,new Vector3(-7.0f,.38f,-11.8f),new Vector3(.55f,.76f,.55f),metal,false);
@@ -192,7 +189,7 @@ namespace Rosvik.Blackout.EditorTools {
             rugRust=MakeMat("V97 rug rust",new Color(.38f,.22f,.17f),.32f);
             whiteboard=MakeMat("V97 whiteboard",new Color(.82f,.83f,.78f),.22f);
         }
-        static Material LoadMat(string path,Color fallback){Material m=AssetDatabase.LoadAssetAtPath<Material>(path);return m?m:MakeMat(Path.GetFileNameWithoutExtension(path),fallback,.4f);}
+        static Material LoadMat(string path,Color fallback){Material m=AssetDatabase.LoadAssetAtPath<Material>(path);return m?m:MakeMat(System.IO.Path.GetFileNameWithoutExtension(path),fallback,.4f);}
         static Material MakeMat(string name,Color color,float smooth){string p=Generated+"/"+name+".mat";Material m=AssetDatabase.LoadAssetAtPath<Material>(p);if(!m){Shader s=Shader.Find("Universal Render Pipeline/Lit")??Shader.Find("Standard");m=new Material(s){name=name};AssetDatabase.CreateAsset(m,p);}if(m.HasProperty("_BaseColor"))m.SetColor("_BaseColor",color);if(m.HasProperty("_Color"))m.SetColor("_Color",color);if(m.HasProperty("_Smoothness"))m.SetFloat("_Smoothness",smooth);EditorUtility.SetDirty(m);return m;}
 
         static GameObject Place(Transform p,string assetName,Vector3 pos,float yaw,float scale){

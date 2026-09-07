@@ -1,0 +1,450 @@
+[
+  {
+    "id": "work_gloves",
+    "name": "Arbetshandskar",
+    "kg": 0.18,
+    "litres": 0.5,
+    "description": "Slitna handskar med gummerade handflator.",
+    "portable": true
+  },
+  {
+    "id": "duct_tape",
+    "name": "Silvertejp",
+    "kg": 0.22,
+    "litres": 0.35,
+    "description": "En halv rulle. Limmet är stelt i kylan.",
+    "portable": true
+  },
+  {
+    "id": "screwdriver",
+    "name": "Spårskruvmejsel",
+    "kg": 0.14,
+    "litres": 0.12,
+    "description": "Blått skaft, färgstänk och en nött spets.",
+    "portable": true
+  },
+  {
+    "id": "pliers",
+    "name": "Kombinationstång",
+    "kg": 0.3,
+    "litres": 0.2,
+    "description": "Lite ytrost kring leden.",
+    "portable": true
+  },
+  {
+    "id": "usb_charger",
+    "name": "Billig USB-laddare",
+    "kg": 0.045,
+    "litres": 0.05,
+    "description": "En lätt nätadapter från en lågprisbeställning. Kräver fungerande el.",
+    "portable": true
+  },
+  {
+    "id": "usb_cable",
+    "name": "USB-C-kabel",
+    "kg": 0.025,
+    "litres": 0.05,
+    "description": "Trasslig laddkabel, en meter lång.",
+    "portable": true
+  },
+  {
+    "id": "water",
+    "name": "Vattenflaska 0,5 l",
+    "kg": 0.53,
+    "litres": 0.6,
+    "description": "Förseglad flaska. Is i flaskhalsen.",
+    "portable": true
+  },
+  {
+    "id": "crispbread",
+    "name": "Knäckebröd",
+    "kg": 0.25,
+    "litres": 1.2,
+    "description": "Ett oöppnat paket i plastpåse.",
+    "portable": true
+  },
+  {
+    "id": "jumper_cables",
+    "name": "Startkablar",
+    "kg": 2.4,
+    "litres": 3.5,
+    "description": "Grova kablar med röda och svarta klämmor.",
+    "portable": true
+  },
+  {
+    "id": "headlamp",
+    "name": "Pannlampa",
+    "kg": 0.09,
+    "litres": 0.2,
+    "description": "Resårbandet luktar verkstad.",
+    "portable": true
+  },
+  {
+    "id": "aa_battery",
+    "name": "AA-batteri",
+    "kg": 0.024,
+    "litres": 0.02,
+    "description": "Alkaliskt batteri, kvarvarande laddning osäker.",
+    "portable": true
+  },
+  {
+    "id": "tow_rope",
+    "name": "Bogserlina",
+    "kg": 1.8,
+    "litres": 3.0,
+    "description": "Flätad lina i en smutsig förvaringspåse.",
+    "portable": true
+  },
+  {
+    "id": "oil",
+    "name": "Motorolja 1 l",
+    "kg": 0.95,
+    "litres": 1.2,
+    "description": "Öppnad dunk med skruvkork.",
+    "portable": true
+  },
+  {
+    "id": "socket_set",
+    "name": "Hylsnyckelsats",
+    "kg": 3.8,
+    "litres": 4.5,
+    "description": "Plastlådan saknar en spärr, verktygen ligger kvar.",
+    "portable": true
+  },
+  {
+    "id": "blanket",
+    "name": "Ullfilt",
+    "kg": 1.3,
+    "litres": 7.0,
+    "description": "Tjock grå filt, lagad längs kanten.",
+    "portable": true
+  },
+  {
+    "id": "matches",
+    "name": "Tändsticksask",
+    "kg": 0.012,
+    "litres": 0.04,
+    "description": "Förvarad torrt i en plastpåse.",
+    "portable": true
+  },
+  {
+    "id": "thermos",
+    "name": "Ståltermos",
+    "kg": 0.6,
+    "litres": 1.4,
+    "description": "Tom termos med buckla i botten.",
+    "portable": true
+  },
+  {
+    "id": "first_aid",
+    "name": "Förbandsväska",
+    "kg": 0.65,
+    "litres": 1.8,
+    "description": "Förseglade kompresser, bandage och tejp.",
+    "portable": true
+  },
+  {
+    "id": "lawn_mower",
+    "name": "Bensingräsklippare",
+    "kg": 28.0,
+    "litres": 160.0,
+    "description": "Gräsrester under kåpan. Kräver transport; går inte i en ryggsäck.",
+    "portable": false
+  },
+  {
+    "id": "rake",
+    "name": "Lövräfsa",
+    "kg": 0.9,
+    "litres": 18.0,
+    "description": "Långt träskaft och grönt plasthuvud.",
+    "portable": true
+  },
+  {
+    "id": "shovel",
+    "name": "Snöskyffel",
+    "kg": 1.8,
+    "litres": 24.0,
+    "description": "Aluminiumblad, sliten skrapkant.",
+    "portable": true
+  },
+  {
+    "id": "fuel_can",
+    "name": "Tom bensindunk 5 l",
+    "kg": 0.7,
+    "litres": 6.0,
+    "description": "Röd plastdunk. Tom.",
+    "portable": true
+  },
+  {
+    "id": "spark_plug",
+    "name": "Tändstift",
+    "kg": 0.05,
+    "litres": 0.04,
+    "description": "Ett reservstift i sin kartong.",
+    "portable": true
+  },
+  {
+    "id": "washer_fluid",
+    "name": "Spolarvätska 3 l",
+    "kg": 3.1,
+    "litres": 3.5,
+    "description": "En dunk vinterspolarvätska.",
+    "portable": true
+  },
+  {
+    "id": "extension_lead",
+    "name": "Skarvsladd 10 m",
+    "kg": 1.6,
+    "litres": 3.0,
+    "description": "Utomhuskabel med gummikontakter.",
+    "portable": true
+  },
+  {
+    "id": "charger_12v",
+    "name": "Batteriladdare 12 V",
+    "kg": 1.1,
+    "litres": 1.8,
+    "description": "Klämmor och nätkabel. Behöver el för att ladda.",
+    "portable": true
+  },
+  {
+    "id": "drill",
+    "name": "Batteriborrmaskin",
+    "kg": 1.7,
+    "litres": 2.0,
+    "description": "En gammal borrmaskin med repigt hölje.",
+    "portable": true
+  },
+  {
+    "id": "drill_bits",
+    "name": "Borrsats",
+    "kg": 0.25,
+    "litres": 0.2,
+    "description": "Olika borrar i ett vikbart fodral.",
+    "portable": true
+  },
+  {
+    "id": "wood_screws",
+    "name": "Träskruv, ask",
+    "kg": 0.45,
+    "litres": 0.3,
+    "description": "Blandade längder, några med förstört spår.",
+    "portable": true
+  },
+  {
+    "id": "nails",
+    "name": "Spik, ask",
+    "kg": 0.5,
+    "litres": 0.25,
+    "description": "Förzinkad spik i fuktig pappkartong.",
+    "portable": true
+  },
+  {
+    "id": "hammer",
+    "name": "Hammare",
+    "kg": 0.6,
+    "litres": 0.5,
+    "description": "Klohammare med slitet gummigrepp.",
+    "portable": true
+  },
+  {
+    "id": "hand_saw",
+    "name": "Fogsvans",
+    "kg": 0.45,
+    "litres": 1.5,
+    "description": "Tänderna är fortfarande vassa.",
+    "portable": true
+  },
+  {
+    "id": "zip_ties",
+    "name": "Buntband, påse",
+    "kg": 0.08,
+    "litres": 0.1,
+    "description": "Svarta buntband i tre längder.",
+    "portable": true
+  },
+  {
+    "id": "paint",
+    "name": "Färgburk 1 l",
+    "kg": 1.4,
+    "litres": 1.4,
+    "description": "Halvfull burk med intorkat lock.",
+    "portable": true
+  },
+  {
+    "id": "bike_pump",
+    "name": "Cykelpump",
+    "kg": 0.7,
+    "litres": 2.0,
+    "description": "Fotmodell med sprucken manometer.",
+    "portable": true
+  },
+  {
+    "id": "inner_tube",
+    "name": "Cykelslang",
+    "kg": 0.18,
+    "litres": 0.2,
+    "description": "Hopvikt reservslang med ventil.",
+    "portable": true
+  },
+  {
+    "id": "raincoat",
+    "name": "Regnjacka",
+    "kg": 0.65,
+    "litres": 2.0,
+    "description": "Gul jacka med reflexremsor.",
+    "portable": true
+  },
+  {
+    "id": "wool_socks",
+    "name": "Ullsockor",
+    "kg": 0.12,
+    "litres": 0.3,
+    "description": "Ett torrt par i en fryspåse.",
+    "portable": true
+  },
+  {
+    "id": "coffee",
+    "name": "Bryggkaffe",
+    "kg": 0.5,
+    "litres": 0.9,
+    "description": "Vakuumförpackat kaffe.",
+    "portable": true
+  },
+  {
+    "id": "canned_beans",
+    "name": "Konserverade bönor",
+    "kg": 0.45,
+    "litres": 0.45,
+    "description": "Konservburk med ringöppning.",
+    "portable": true
+  },
+  {
+    "id": "can_opener",
+    "name": "Konservöppnare",
+    "kg": 0.08,
+    "litres": 0.08,
+    "description": "Liten manuell öppnare.",
+    "portable": true
+  },
+  {
+    "id": "soap",
+    "name": "Tvål",
+    "kg": 0.1,
+    "litres": 0.12,
+    "description": "Oöppnad tvål, papperet är fuktigt.",
+    "portable": true
+  },
+  {
+    "id": "toilet_paper",
+    "name": "Toalettpappersrulle",
+    "kg": 0.1,
+    "litres": 1.2,
+    "description": "En torr rulle.",
+    "portable": true
+  },
+  {
+    "id": "trash_bags",
+    "name": "Sopsäckar, rulle",
+    "kg": 0.4,
+    "litres": 0.5,
+    "description": "Tjocka svarta säckar.",
+    "portable": true
+  },
+  {
+    "id": "candle",
+    "name": "Stearinljus",
+    "kg": 0.12,
+    "litres": 0.15,
+    "description": "Ett vanligt vitt kronljus.",
+    "portable": true
+  },
+  {
+    "id": "notebook",
+    "name": "Anteckningsbok",
+    "kg": 0.15,
+    "litres": 0.25,
+    "description": "Rutade sidor, de flesta tomma.",
+    "portable": true
+  },
+  {
+    "id": "pencil",
+    "name": "Blyertspenna",
+    "kg": 0.008,
+    "litres": 0.01,
+    "description": "Halv penna med bitmärken.",
+    "portable": true
+  },
+  {
+    "id": "radio",
+    "name": "Batteriradio",
+    "kg": 0.8,
+    "litres": 1.3,
+    "description": "FM-radio med teleskopantenn. Behöver batterier.",
+    "portable": true
+  },
+  {
+    "id": "powerbank",
+    "name": "Powerbank",
+    "kg": 0.25,
+    "litres": 0.2,
+    "description": "Repigt skal och fyra laddindikatorer.",
+    "portable": true
+  },
+  {
+    "id": "phone",
+    "name": "Mobiltelefon",
+    "kg": 0.19,
+    "litres": 0.12,
+    "description": "Skärmen är sprucken. Ingen täckning.",
+    "portable": true
+  },
+  {
+    "id": "measuring_tape",
+    "name": "Måttband",
+    "kg": 0.2,
+    "litres": 0.15,
+    "description": "Fem meters stålband med låsknapp.",
+    "portable": true
+  },
+  {
+    "id": "bucket",
+    "name": "Plasthink 10 l",
+    "kg": 0.45,
+    "litres": 11.0,
+    "description": "Vit hink med metallhandtag.",
+    "portable": true
+  },
+  {
+    "id": "rope",
+    "name": "Rep 15 m",
+    "kg": 1.2,
+    "litres": 2.5,
+    "description": "Hopknutet rep med nötta ändar.",
+    "portable": true
+  },
+  {
+    "id": "scissors",
+    "name": "Sax",
+    "kg": 0.09,
+    "litres": 0.1,
+    "description": "Kökssax med röda handtag.",
+    "portable": true
+  },
+  {
+    "id": "knife",
+    "name": "Slidkniv",
+    "kg": 0.16,
+    "litres": 0.2,
+    "description": "Brukskniv i plastslida.",
+    "portable": true
+  },
+  {
+    "id": "insulation",
+    "name": "Isoleringsrulle",
+    "kg": 7.0,
+    "litres": 100.0,
+    "description": "Skrymmande isolering i plast. Kräver transport.",
+    "portable": false
+  }
+]

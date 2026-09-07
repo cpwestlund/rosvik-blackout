@@ -12,6 +12,10 @@ var warmth = 100.0
 var warmth_label = Label.new()
 var warmth_bar = ProgressBar.new()
 var cold_warning = false
+var hunger = 0.0
+var thirst = 0.0
+var needs_label = Label.new()
+var needs_warning = false
 
 
 const Grounds = preload("res://winter/scripts/school_grounds.gd")
@@ -106,6 +110,7 @@ func _ready() -> void :
 	set_stage(0)
 	_setup_inventory()
 	_setup_warmth_ui()
+	_refresh_needs_ui()
 	_restore_save()
 	_update_warmth(0.0)
 	save_ready = true
@@ -114,6 +119,7 @@ func _ready() -> void :
 	if "--smoke-test" in OS.get_cmdline_user_args(): call_deferred("_smoke_test")
 	if "--walk-test" in OS.get_cmdline_user_args(): call_deferred("_walk_test")
 	if "--inventory-test" in OS.get_cmdline_user_args(): call_deferred("_inventory_test")
+	if "--needs-test" in OS.get_cmdline_user_args(): call_deferred("_needs_test")
 	if "--warmth-test" in OS.get_cmdline_user_args(): call_deferred("_warmth_test")
 	if "--house-test" in OS.get_cmdline_user_args(): call_deferred("_house_test")
 	if "--house-loot-test" in OS.get_cmdline_user_args(): call_deferred("_house_loot_test")
@@ -734,6 +740,7 @@ func _process(delta: float) -> void :
 		_update_camera(delta)
 		_interaction(delta)
 		_update_warmth(delta)
+		_update_needs(delta)
 		autosave_clock += delta
 		if autosave_clock >= 30.0:
 			autosave_clock = 0.0
@@ -747,6 +754,14 @@ func _process(delta: float) -> void :
 			_toggle_inventory()
 			inventory.box_list.select(4)
 			inventory._describe(4, false)
+		if screenshot_frame == 2 and "--capture-needs" in OS.get_cmdline_user_args():
+			hunger = 42.0
+			thirst = 58.0
+			loot.pack = [loot.stack("water",2,100),loot.stack("crispbread",1,100)]
+			inventory._refresh()
+			inventory.pack_list.select(0)
+			inventory._describe(0,true)
+			_refresh_needs_ui()
 		if screenshot_frame == 2 and "--capture-house" in OS.get_cmdline_user_args():
 			house.set_open(true)
 			player.position = house.to_global(Vector3(2.6,0.1,3.0))
@@ -982,6 +997,7 @@ func _setup_inventory() -> void:
 	hud.add_child(inventory)
 	inventory.closed.connect(_toggle_inventory)
 	inventory.transferred.connect(_save_progress)
+	inventory.use_requested.connect(_use_supply)
 	get_tree().auto_accept_quit = false
 
 func _nearest_container() -> String:
@@ -1017,7 +1033,7 @@ func _is_test() -> bool:
 func _save_progress(path: String = SaveGame.SAVE_PATH) -> void:
 	if not save_ready or (_is_test() and path == SaveGame.SAVE_PATH): return
 	var p = player.position
-	var data = {"version": 1, "stage": stage, "position": [p.x, p.y, p.z], "loot": loot.snapshot(), "house_door_open": house.door_open, "warmth": warmth}
+	var data = {"version": 1, "stage": stage, "position": [p.x, p.y, p.z], "loot": loot.snapshot(), "house_door_open": house.door_open, "warmth": warmth, "needs": {"hunger": hunger, "thirst": thirst}}
 	if not SaveGame.write(data, path): _message("Kunde inte spara. Kontrollera ledigt utrymme.", 8.0)
 
 func _restore_save(source: String = SaveGame.SAVE_PATH) -> void:
@@ -1032,7 +1048,13 @@ func _restore_save(source: String = SaveGame.SAVE_PATH) -> void:
 		var saved_warmth = data.get("warmth", 100.0)
 		if not (saved_warmth is int or saved_warmth is float): continue
 		if not is_finite(float(saved_warmth)) or saved_warmth < 0 or saved_warmth > 100: continue
+		var saved_needs = data.get("needs", {"hunger": 0.0, "thirst": 0.0})
+		if not _valid_needs(saved_needs): continue
 		if blocked or not loot.restore(data.loot): continue
+		hunger = float(saved_needs.hunger)
+		thirst = float(saved_needs.thirst)
+		needs_warning = maxf(hunger,thirst) >= 70.0
+		_refresh_needs_ui()
 		warmth = float(saved_warmth)
 		cold_warning = warmth <= 35.0
 		set_stage(int(data.stage))
@@ -1158,6 +1180,8 @@ func _setup_warmth_ui() -> void:
 	warmth_bar.show_percentage = false
 	warmth_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(warmth_bar)
+	needs_label.add_theme_font_size_override("font_size",14)
+	column.add_child(needs_label)
 
 func _warmth_zone() -> String:
 	if house.contains(player.position): return "shelter"
@@ -1224,4 +1248,94 @@ func _warmth_test() -> void:
 	assert(warmth == 100.0, "Invalid warmth must fall back to valid backup")
 	for suffix: String in ["", ".bak", ".tmp"]: DirAccess.remove_absolute(ProjectSettings.globalize_path(path+suffix))
 	print("WINTER_WARMTH_OK cooling=true shelter=true powered_heat=true pause=true save_and_legacy=true")
+	get_tree().quit()
+
+func _valid_needs(value: Variant) -> bool:
+	if not value is Dictionary: return false
+	for key: String in ["hunger", "thirst"]:
+		var amount = value.get(key)
+		if not (amount is int or amount is float): return false
+		if not is_finite(float(amount)) or amount < 0 or amount > 100: return false
+	return true
+
+func _refresh_needs_ui() -> void:
+	needs_label.text = "Hunger %d%% · Törst %d%%" % [roundi(hunger),roundi(thirst)]
+	needs_label.modulate = Color("e4b97d") if maxf(hunger,thirst) >= 70.0 else Color("c3d0d4")
+
+func _update_needs(delta: float) -> void:
+	if paused: return
+	hunger = minf(100.0,hunger + delta * 0.018)
+	thirst = minf(100.0,thirst + delta * 0.027)
+	_refresh_needs_ui()
+	if maxf(hunger,thirst) >= 70.0 and not needs_warning:
+		needs_warning = true
+		_message("Du behöver mat eller vatten. Öppna ryggsäcken med I och välj något att äta eller dricka.",8.0)
+	elif maxf(hunger,thirst) < 60.0: needs_warning = false
+
+func _use_supply(index: int) -> void:
+	if not inventory.visible or index < 0 or index >= loot.pack.size(): return
+	var item: Dictionary = loot.pack[index]
+	var id: String = item.id
+	if id not in ["water", "crispbread"]: return
+	if (id == "water" and thirst <= 0.0) or (id == "crispbread" and hunger <= 0.0):
+		inventory.description.text = "Du är redan otörstig." if id == "water" else "Du är redan mätt."
+		return
+	if id == "water": thirst = maxf(0.0,thirst - 45.0)
+	else: hunger = maxf(0.0,hunger - 35.0)
+	item.quantity -= 1
+	if item.quantity == 0: loot.pack.remove_at(index)
+	inventory._refresh()
+	inventory.description.text = "Du drack vatten. Törst: %d%%." % roundi(thirst) if id == "water" else "Du åt knäckebröd. Hunger: %d%%." % roundi(hunger)
+	_refresh_needs_ui()
+	if maxf(hunger,thirst) < 60.0: needs_warning = false
+	_save_progress()
+
+func _needs_test() -> void:
+	_update_needs(1000.0)
+	assert(is_equal_approx(hunger,18.0) and is_equal_approx(thirst,27.0))
+	player.position = BATTERY_POS
+	loot.pack = [loot.stack("water",2,100),loot.stack("crispbread",1,100),loot.stack("pliers",1,80)]
+	_toggle_inventory()
+	_update_needs(1000.0)
+	assert(is_equal_approx(hunger,18.0) and is_equal_approx(thirst,27.0))
+	inventory._describe(0,false)
+	assert(inventory.use_item.disabled and inventory.selected_pack_index == -1)
+	inventory.pack_list.select(2)
+	inventory._describe(2,true)
+	assert(inventory.use_item.disabled)
+	inventory.pack_list.select(0)
+	inventory._describe(0,true)
+	assert(not inventory.use_item.disabled)
+	inventory.use_item.pressed.emit()
+	assert(thirst == 0.0 and loot.pack[0].quantity == 1 and inventory.use_item.disabled)
+	inventory._describe(0,true)
+	inventory.use_item.pressed.emit()
+	assert(loot.pack[0].quantity == 1, "Do not waste water when fully hydrated")
+	inventory._describe(1,true)
+	inventory.use_item.pressed.emit()
+	assert(hunger == 0.0 and loot.pack.size() == 2 and loot.pack[1].id == "pliers")
+	_toggle_inventory()
+	_use_supply(0)
+	assert(loot.pack[0].quantity == 1)
+	_update_needs(10000.0)
+	assert(hunger == 100.0 and thirst == 100.0)
+	var path = "user://winter_needs_automated_test.json"
+	_save_progress(path)
+	hunger = 0.0
+	thirst = 0.0
+	loot.reset()
+	_restore_save(path)
+	assert(hunger == 100.0 and thirst == 100.0 and loot.pack[0].quantity == 1 and loot.pack.size() == 2)
+	var legacy = SaveGame.read_file(path)
+	legacy.erase("needs")
+	assert(SaveGame.write(legacy,path))
+	_restore_save(path)
+	assert(hunger == 0.0 and thirst == 0.0)
+	legacy.needs = {"hunger": -1, "thirst": 50}
+	assert(SaveGame.write(legacy,path))
+	hunger = 50.0
+	_restore_save(path)
+	assert(hunger == 0.0, "Corrupt needs must load valid backup")
+	for suffix: String in ["", ".bak", ".tmp"]: DirAccess.remove_absolute(ProjectSettings.globalize_path(path+suffix))
+	print("WINTER_NEEDS_OK pace=true pause=true ui_use=true no_waste=true save_consumption=true legacy=true")
 	get_tree().quit()

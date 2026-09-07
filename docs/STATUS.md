@@ -73,3 +73,11 @@ Discrete HUD and warning at 35%, up to 20% movement penalty, no death.
 Pause/inventory freeze simulation. Saved warmth validated before loot mutation;
 legacy saves default to 100. Automated --warmth-test covers zones/power/range,
 pause, bounds, save migration and malformed-field backup. No item-use expansion.
+
+## Food and water pass
+Hunger/thirst rise 0.018/0.027 points/sec, freeze on pause/inventory, cap100.
+Pack-only use button consumes one water/crispbread for -45 thirst/-35 hunger;
+zero need rejects consumption. Saved immediately, needs validated before loot
+restore; old saves default0. HUD below warmth, warning70, no death penalty.
+--needs-test exercises actual UI signal, no-waste, stack removal, pause,
+consumed loot roundtrip and legacy/corrupt-field backup. Keep next pass bounded.

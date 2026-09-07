@@ -6,6 +6,7 @@ var preview = TextureRect.new()
 
 signal closed
 signal transferred
+signal use_requested(index: int)
 var loot: RefCounted
 var container_id = ""
 var pack_list = ItemList.new()
@@ -15,6 +16,8 @@ var description = Label.new()
 var box_label = Label.new()
 var take = Button.new()
 var put = Button.new()
+var use_item = Button.new()
+var selected_pack_index = -1
 
 func _ready() -> void:
 	position = Vector2(290, 90)
@@ -63,6 +66,11 @@ func _ready() -> void:
 	description.custom_minimum_size = Vector2(820, 112)
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	details.add_child(description)
+	use_item.text = "Använd · välj mat eller vatten i ryggsäcken"
+	use_item.disabled = true
+	use_item.pressed.connect(func():
+		if selected_pack_index >= 0: use_requested.emit(selected_pack_index))
+	column.add_child(use_item)
 	var close = Button.new()
 	close.text = "Tillbaka · I / Esc"
 	close.pressed.connect(func(): closed.emit())
@@ -79,6 +87,10 @@ func open_box(model: RefCounted, id: String, title: String) -> void:
 	show()
 
 func _refresh() -> void:
+	selected_pack_index = -1
+	use_item.disabled = true
+	use_item.text = "Använd · välj mat eller vatten i ryggsäcken"
+	preview.texture = null
 	var load: Vector2 = loot.totals(loot.pack)
 	load_label.text = "%.2f / 18 kg     ·     %.1f / 28 liter" % [load.x, load.y]
 	for list: ItemList in [pack_list, box_list]: list.clear()
@@ -93,6 +105,10 @@ func _fill(list: ItemList, items: Array) -> void:
 
 func _describe(index: int, from_pack: bool) -> void:
 	var source: Array = loot.pack if from_pack else loot.containers[container_id]
+	selected_pack_index = index if from_pack else -1
+	var id: String = source[index].id
+	use_item.disabled = not from_pack or id not in ["water", "crispbread"]
+	use_item.text = "Drick vatten · en flaska" if from_pack and id == "water" else "Ät knäckebröd · en förpackning" if from_pack and id == "crispbread" else "Använd · välj mat eller vatten i ryggsäcken"
 	var definition: Dictionary = loot.catalog[source[index].id]
 	preview.texture = art.icon(source[index].id)
 	description.text = "%s\n%.3f kg · %.2f liter per styck" % [definition.description, definition.kg, definition.litres]

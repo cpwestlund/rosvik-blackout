@@ -52,6 +52,12 @@ jobs:
           /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --fixed-fps 60 --quit-after 24000 -- --house-loot-test 2>&1 | tee /tmp/house-loot.log
           grep -q WINTER_HOUSE_LOOT_OK /tmp/house-loot.log
           ! grep -E 'SCRIPT ERROR|^ERROR:' /tmp/house-loot.log
+      - name: Validate eating and drinking
+        run: |
+          set -euo pipefail
+          /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --quit-after 120 -- --needs-test 2>&1 | tee /tmp/needs.log
+          grep -q WINTER_NEEDS_OK /tmp/needs.log
+          ! grep -E 'SCRIPT ERROR|^ERROR:' /tmp/needs.log
       - name: Validate warmth
         run: |
           set -euo pipefail
@@ -67,7 +73,7 @@ jobs:
       - name: Capture inventory artwork
         run: |
           cp /tmp/rosvik-winter.png /tmp/rosvik-overview.png
-          xvfb-run -a /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --path . --rendering-method gl_compatibility -- --capture --capture-inventory
+          xvfb-run -a /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --path . --rendering-method gl_compatibility -- --capture --capture-inventory --capture-needs
           cp /tmp/rosvik-winter.png /tmp/rosvik-inventory.png
       - name: Capture house interior
         run: |
@@ -89,5 +95,5 @@ jobs:
           cp winter/STARTA_KOMPATIBILITET.cmd build/
       - uses: actions/upload-artifact@v4
         with:
-          name: ROSVIK_BLACKOUT_WARMTH
+          name: ROSVIK_BLACKOUT_FOOD_WATER
           path: build/

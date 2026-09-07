@@ -24,7 +24,7 @@ Tidigare miljöpass: takytor syns nu uppifrån, sporthallen skiljer sig från sk
 snövallar fortsätter inte genom korsande vägar. Hallens interiör/läktare återstår.
 
 56 föremålstyper finns i katalogen; 18 typer är placerade i fem förråd.
-Föremålen kan ännu samlas och lagras. Förbrukning, reparation, garage,
+Föremål kan samlas och lagras; vatten och knäckebröd kan användas. Reparation, garage,
 full överlevnad och kampanj ingår inte i denna version.
 Batteriet för första uppdraget bärs separat som tidigare.
 
@@ -53,3 +53,12 @@ reservmatning och stå nära värmepunkten vid entrén. Där fylls mätaren på.
 Under 35% får du en varning och blir gradvis långsammare, högst 20%.
 Du kan inte dö av kyla i detta första pass. Paus och öppen ryggsäck stoppar tiden.
 Värmen sparas. Äldre sparningar börjar med full värmereserv.
+
+MAT OCH VATTEN
+Hunger och törst ökar långsamt när du spelar, inte under paus eller i ryggsäcken.
+0% betyder mätt/otörstig. Markera vatten eller knäckebröd i RYGGSÄCK-listan
+och tryck Drick vatten eller Ät knäckebröd. Ta först föremålet från förrådet.
+En flaska minskar törsten 45 procentenheter; en förpackning knäckebröd minskar
+hungern 35. Ett exemplar förbrukas och sparas direkt. Vid 0% används inget.
+Behoven sparas; äldre omgångar börjar mätta och otörstiga. Ingen svältdöd
+ingår i detta första pass. Utforska i lugn takt.

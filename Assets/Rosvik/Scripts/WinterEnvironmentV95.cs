@@ -5,14 +5,14 @@ namespace Rosvik.Blackout {
     [DisallowMultipleComponent]
     public sealed class WinterFootprintsV95 : MonoBehaviour {
         public Material footprintMaterial;
-        public float stepSpacing = 0.58f;
+        public float stepSpacing = 0.46f;
         public float footSeparation = 0.17f;
         public float footprintLength = 0.32f;
         public float footprintWidth = 0.14f;
-        public float surfaceOffset = 0.018f;
-        public int maxFootprints = 140;
-        public float raycastHeight = 1.1f;
-        public float raycastDistance = 2.2f;
+        public float surfaceOffset = 0.02f;
+        public int maxFootprints = 220;
+        public float raycastHeight = 1.2f;
+        public float raycastDistance = 2.5f;
 
         readonly Queue<GameObject> prints = new Queue<GameObject>();
         Vector3 lastStepPosition;
@@ -26,46 +26,76 @@ namespace Rosvik.Blackout {
         }
 
         void Update() {
-            Vector3 p = transform.position;
-            Vector3 delta = p - lastStepPosition;
-            delta.y = 0f;
-            if (delta.magnitude < stepSpacing) return;
+            Vector3 current = transform.position;
+            Vector3 flatDelta = current - lastStepPosition;
+            flatDelta.y = 0f;
+            float dist = flatDelta.magnitude;
+            if (dist < stepSpacing) return;
 
-            Vector3 dir = delta.normalized;
+            Vector3 dir = flatDelta.normalized;
             if (dir.sqrMagnitude < 0.01f) dir = lastMoveDirection;
             lastMoveDirection = dir;
 
-            if (TryFindSnowSurface(p, out RaycastHit hit)) {
-                Vector3 right = Vector3.Cross(hit.normal, dir).normalized;
-                float side = leftFoot ? -footSeparation : footSeparation;
-                Vector3 pos = hit.point + right * side + hit.normal * surfaceOffset;
-                SpawnFootprint(pos, hit.normal, dir, leftFoot);
-                leftFoot = !leftFoot;
+            int safety = 0;
+            while (dist >= stepSpacing && safety++ < 10) {
+                Vector3 sample = lastStepPosition + dir * stepSpacing;
+                sample.y = current.y;
+
+                if (TryResolveSnowSurface(sample, out Vector3 surfacePoint, out Vector3 normal)) {
+                    Vector3 right = Vector3.Cross(normal, dir).normalized;
+                    if (right.sqrMagnitude < 0.01f) right = new Vector3(dir.z, 0f, -dir.x).normalized;
+                    float side = leftFoot ? -footSeparation : footSeparation;
+                    SpawnFootprint(surfacePoint + right * side + normal * surfaceOffset, normal, dir, leftFoot);
+                    leftFoot = !leftFoot;
+                }
+
+                lastStepPosition = sample;
+                flatDelta = current - lastStepPosition;
+                flatDelta.y = 0f;
+                dist = flatDelta.magnitude;
+                if (dist > 0.001f) dir = flatDelta.normalized;
             }
-            lastStepPosition = p;
         }
 
-        bool TryFindSnowSurface(Vector3 p, out RaycastHit chosen) {
+        bool TryResolveSnowSurface(Vector3 p, out Vector3 point, out Vector3 normal) {
             RaycastHit[] hits = Physics.RaycastAll(p + Vector3.up * raycastHeight, Vector3.down, raycastDistance, ~0, QueryTriggerInteraction.Ignore);
             System.Array.Sort(hits, (a,b) => a.distance.CompareTo(b.distance));
+
+            bool sawBlockingIndoorSurface = false;
             foreach (RaycastHit h in hits) {
-                if (!h.collider) continue;
+                if (!h.collider || h.collider.transform.IsChildOf(transform)) continue;
                 string n = h.collider.gameObject.name.ToLowerInvariant();
-                if (n.Contains("snow") || n.Contains("terrain") || n.Contains("road") || n.Contains("packed") || n.Contains("asphalt") || n.Contains("ground") || n.Contains("forecourt") || n.Contains("apron")) {
-                    chosen = h;
+                bool snowLike = n.Contains("snow") || n.Contains("terrain") || n.Contains("road") || n.Contains("packed") ||
+                                n.Contains("asphalt") || n.Contains("ground") || n.Contains("forecourt") || n.Contains("apron");
+                if (snowLike && h.normal.y > 0.35f) {
+                    point = h.point;
+                    normal = h.normal;
                     return true;
                 }
+                if (h.normal.y > 0.35f && (n.Contains("floor") || n.Contains("interior") || n.Contains("room") || n.Contains("hall")))
+                    sawBlockingIndoorSurface = true;
             }
-            chosen = default;
+
+            // The V95 soft snow mesh may momentarily have no physics hit while the scene finishes loading.
+            // Only use the flat fallback when there was no obvious indoor floor underneath the player.
+            if (!sawBlockingIndoorSurface && Mathf.Abs(p.y) < 0.45f) {
+                point = new Vector3(p.x, 0.018f, p.z);
+                normal = Vector3.up;
+                return true;
+            }
+
+            point = default;
+            normal = Vector3.up;
             return false;
         }
 
         void SpawnFootprint(Vector3 pos, Vector3 normal, Vector3 direction, bool left) {
+            if (!footprintMaterial) return;
             GameObject g = new GameObject(left ? "left boot print" : "right boot print");
             g.transform.position = pos;
             Vector3 tangent = Vector3.ProjectOnPlane(direction, normal).normalized;
             if (tangent.sqrMagnitude < 0.01f) tangent = Vector3.forward;
-            g.transform.rotation = Quaternion.LookRotation(tangent, normal) * Quaternion.Euler(0f, left ? -4f : 4f, 0f);
+            g.transform.rotation = Quaternion.LookRotation(tangent, normal) * Quaternion.Euler(0f, left ? -5f : 5f, 0f);
             g.transform.localScale = new Vector3(footprintWidth / 0.14f, 1f, footprintLength / 0.32f);
 
             MeshFilter mf = g.AddComponent<MeshFilter>();
@@ -76,7 +106,7 @@ namespace Rosvik.Blackout {
             mr.receiveShadows = true;
 
             prints.Enqueue(g);
-            while (prints.Count > Mathf.Max(20, maxFootprints)) {
+            while (prints.Count > Mathf.Max(40, maxFootprints)) {
                 GameObject old = prints.Dequeue();
                 if (old) Destroy(old);
             }
